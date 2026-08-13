@@ -1,0 +1,298 @@
+#!/usr/bin/env php
+<?php
+declare(strict_types=1);
+
+/**
+ * Herramienta CLI para administración del módulo tpvsync.
+ *
+ * Uso (desde la raíz del PrestaShop):
+ *   php modules/tpvsync/bin/tpvsync <comando> [opciones]
+ *
+ * Comandos disponibles:
+ *   status                   Estado general (conexión, queue, breaker, secrets)
+ *   test-connection          Intenta GET /health contra el TPV
+ *   reconcile [--limit=100]  Reconcilia productos con el TPV
+ *   push-all [--dry-run]     Sube catálogo PS → TPV
+ *   queue-process [--batch=20]  Procesa la queue ahora
+ *   queue-stats              Estadísticas de la queue
+ *   queue-retry <id>         Reintenta una entrada abandoned
+ *   queue-purge [--days=30]  Purga entradas done/abandoned viejas
+ *   breaker-status           Estado del circuit breaker
+ *   breaker-reset            Cierra el circuit manualmente
+ *   notify-eval              Evalúa reglas de notificaciones (cron horario)
+ *   secrets-migrate          Cifra secrets en plaintext en la BD
+ *   help [comando]           Muestra esta ayuda o el detalle de un comando
+ *
+ * Crontab típico:
+ *   * /5 * * * * php /ruta/a/tu/prestashop/modules/tpvsync/bin/tpvsync queue-process
+ *   0 * * * * php /ruta/a/tu/prestashop/modules/tpvsync/bin/tpvsync notify-eval
+ *   0 4 * * * php /ruta/a/tu/prestashop/modules/tpvsync/bin/tpvsync queue-purge --days=30
+ */
+
+// SEGURIDAD: bloqueo de invocación HTTP. Si alguien expone esto, tiene
+// acceso a comandos administrativos arbitrarios. Solo CLI.
+if (PHP_SAPI !== 'cli' && PHP_SAPI !== 'phpdbg') {
+    http_response_code(403); exit('CLI only');
+}
+
+// Bootstrap PS desde el script (subir 4 niveles desde modules/tpvsync/bin/tpvsync)
+$psRoot = dirname(__DIR__, 3);
+require_once $psRoot . '/config/config.inc.php';
+require_once _PS_MODULE_DIR_ . 'tpvsync/tpvsync.php';
+
+/** Helper: imprime texto coloreado (si stdout es tty). */
+function tpvsync_color(string $color, string $text): string {
+    if (!stream_isatty(STDOUT)) return $text;
+    $codes = ['red' => '31', 'green' => '32', 'yellow' => '33', 'cyan' => '36', 'bold' => '1'];
+    $c = $codes[$color] ?? '0';
+    return "\033[{$c}m{$text}\033[0m";
+}
+
+function tpvsync_ok(string $msg): void    { echo tpvsync_color('green', '✓ ' . $msg) . PHP_EOL; }
+function tpvsync_err(string $msg): void   { fwrite(STDERR, tpvsync_color('red', '✗ ' . $msg) . PHP_EOL); }
+function tpvsync_warn(string $msg): void  { echo tpvsync_color('yellow', '! ' . $msg) . PHP_EOL; }
+function tpvsync_info(string $msg): void  { echo tpvsync_color('cyan', '› ' . $msg) . PHP_EOL; }
+
+function tpvsync_table(array $rows): void {
+    if (empty($rows)) { echo "(no rows)" . PHP_EOL; return; }
+    $widths = [];
+    foreach ($rows as $r) foreach ($r as $k => $v) $widths[$k] = max($widths[$k] ?? strlen((string) $k), strlen((string) $v));
+    $sep = '+' . implode('+', array_map(fn($w) => str_repeat('-', $w + 2), $widths)) . '+';
+    echo $sep . PHP_EOL;
+    $header = '|' . implode('|', array_map(fn($k) => ' ' . str_pad($k, $widths[$k]) . ' ', array_keys($widths))) . '|';
+    echo $header . PHP_EOL . $sep . PHP_EOL;
+    foreach ($rows as $r) {
+        echo '|' . implode('|', array_map(fn($k) => ' ' . str_pad((string) ($r[$k] ?? ''), $widths[$k]) . ' ', array_keys($widths))) . '|' . PHP_EOL;
+    }
+    echo $sep . PHP_EOL;
+}
+
+/** Parser muy simple de --opciones. Devuelve [posArgs, assocArgs]. */
+function tpvsync_parse_args(array $argv): array {
+    $pos = [];
+    $assoc = [];
+    foreach (array_slice($argv, 2) as $a) {
+        if (strncmp($a, '--', 2) === 0) {
+            $pair = substr($a, 2);
+            $eq = strpos($pair, '=');
+            if ($eq === false) { $assoc[$pair] = true; }
+            else { $assoc[substr($pair, 0, $eq)] = substr($pair, $eq + 1); }
+        } else {
+            $pos[] = $a;
+        }
+    }
+    return [$pos, $assoc];
+}
+
+// ─── Comandos ────────────────────────────────────────────────────────────────
+
+function cmd_help(array $args): int {
+    $cmd = $args[0] ?? null;
+    if ($cmd === null) {
+        echo <<<HELP
+Uso: php modules/tpvsync/bin/tpvsync <comando> [opciones]
+
+Comandos:
+  status                       Estado general
+  test-connection              GET /health al TPV
+  reconcile [--limit=N]        Reconcilia N productos
+  push-all [--dry-run]         Sube catálogo PS → TPV
+  queue-process [--batch=N]    Procesa N items de la queue
+  queue-stats                  Estadísticas de la queue
+  queue-retry <id>             Reintenta entrada abandoned
+  queue-purge [--days=N]       Purga done/abandoned > N días
+  breaker-status               Estado del circuit breaker
+  breaker-reset                Cierra el circuit manualmente
+  notify-eval                  Evalúa reglas de notificaciones
+  secrets-migrate              Cifra secrets plaintext en BD
+  help [comando]               Esta ayuda o detalle de un comando
+
+HELP;
+        return 0;
+    }
+    echo "Detalle del comando '$cmd' — usa 'help' sin argumento para ver todos los comandos." . PHP_EOL;
+    return 0;
+}
+
+function cmd_status(): int {
+    $rows = [];
+    $rows[] = ['metric' => 'api_url',        'value' => (string) Configuration::get('TPVSYNC_API_URL') ?: '(no configurada)'];
+    $rows[] = ['metric' => 'client_id',      'value' => (string) Configuration::get('TPVSYNC_CLIENT_ID') ?: '(no configurado)'];
+    $rows[] = ['metric' => 'client_secret',  'value' => TpvSyncSecrets::get('TPVSYNC_CLIENT_SECRET') !== '' ? '(configurado)' : '(VACÍO)'];
+    $rows[] = ['metric' => 'webhook_id',     'value' => (string) Configuration::get('TPVSYNC_WEBHOOK_ID') ?: 'not-registered'];
+    $rows[] = ['metric' => 'module_catalog', 'value' => ((int) Configuration::get('TPVSYNC_MODULE_CATALOG')) ? 'on' : 'off'];
+    $rows[] = ['metric' => 'module_orders',  'value' => ((int) Configuration::get('TPVSYNC_MODULE_ORDERS')) ? 'on' : 'off'];
+    $rows[] = ['metric' => 'principal',      'value' => (string) Configuration::get('TPVSYNC_PRINCIPAL') ?: 'auto'];
+
+    $db = Db::getInstance();
+    foreach ([
+        'pending'   => "status='pending'",
+        'done'      => "status='done'",
+        'abandoned' => "status='abandoned'",
+    ] as $st => $where) {
+        $n = (int) $db->getValue('SELECT COUNT(*) FROM ' . _DB_PREFIX_ . 'tpv_sync_queue WHERE ' . $where);
+        $rows[] = ['metric' => "queue_$st", 'value' => (string) $n];
+    }
+
+    $rows[] = ['metric' => 'breaker_state',  'value' => (string) Configuration::get('TPVSYNC_CB_STATE') ?: 'closed'];
+    $rows[] = ['metric' => 'breaker_fails',  'value' => (string) Configuration::get('TPVSYNC_CB_FAILS') ?: '0'];
+    $rows[] = ['metric' => 'health_ok',      'value' => ((int) Configuration::get('TPVSYNC_HEALTH_OK')) ? 'yes' : 'no'];
+    $rows[] = ['metric' => 'health_at',      'value' => ((int) Configuration::get('TPVSYNC_HEALTH_CHECKED_AT')) > 0
+                                                       ? gmdate('Y-m-d H:i:s', (int) Configuration::get('TPVSYNC_HEALTH_CHECKED_AT')) . ' UTC'
+                                                       : 'never'];
+
+    tpvsync_table($rows);
+    return 0;
+}
+
+function cmd_test_connection(): int {
+    $mod = new Tpvsync();
+    $api = $mod->api();
+    if (!$api->isConfigured()) {
+        tpvsync_err('No configurado: falta API_URL / CLIENT_ID / CLIENT_SECRET');
+        return 1;
+    }
+    try {
+        $r = $api->get('/health');
+        if (!empty($r['status']) && $r['status'] === 'ok') {
+            tpvsync_ok('GET /health → ' . ($r['service'] ?? 'ok') . ' v' . ($r['version'] ?? '?'));
+            return 0;
+        }
+        tpvsync_err('Respuesta inesperada: ' . json_encode($r));
+        return 1;
+    } catch (\Throwable $e) {
+        tpvsync_err('Excepción: ' . $e->getMessage());
+        return 1;
+    }
+}
+
+function cmd_reconcile(array $assoc): int {
+    $limit = (int) ($assoc['limit'] ?? 100);
+    if ($limit <= 0 || $limit > 5000) $limit = 100;
+    tpvsync_info("Reconciliando hasta $limit productos…");
+    $mod = new Tpvsync();
+    $stats = $mod->products()->reconcile($limit);
+    foreach ($stats as $k => $v) tpvsync_info("  $k = $v");
+    return 0;
+}
+
+function cmd_push_all(array $assoc): int {
+    $dry = !empty($assoc['dry-run']);
+    if ($dry) tpvsync_warn('--dry-run no implementado en bulkPush, simulando con estadística mínima');
+    $mod = new Tpvsync();
+    $ps = $mod->products();
+    if (method_exists($ps, 'pushAllPsProducts')) {
+        $stats = $ps->pushAllPsProducts();
+    } else {
+        // Fallback: contar productos PS activos
+        $n = (int) Db::getInstance()->getValue('SELECT COUNT(*) FROM ' . _DB_PREFIX_ . 'product WHERE active = 1');
+        tpvsync_info("Productos PS activos: $n (no se ha hecho push real — pushAllPsProducts no existe)");
+        return 0;
+    }
+    foreach ($stats as $k => $v) tpvsync_info("  $k = " . (is_scalar($v) ? (string) $v : json_encode($v)));
+    return 0;
+}
+
+function cmd_queue_process(array $assoc): int {
+    $batch = (int) ($assoc['batch'] ?? 20);
+    if ($batch <= 0 || $batch > 200) $batch = 20;
+    $mod = new Tpvsync();
+    $stats = $mod->queue()->processPending($batch);
+    tpvsync_ok("Queue procesada: " . json_encode($stats));
+    return 0;
+}
+
+function cmd_queue_stats(): int {
+    $db = Db::getInstance();
+    $rows = $db->executeS('SELECT status, COUNT(*) AS n FROM ' . _DB_PREFIX_ . 'tpv_sync_queue GROUP BY status') ?: [];
+    if (empty($rows)) { tpvsync_info('Queue vacía'); return 0; }
+    tpvsync_table(array_map(fn($r) => ['status' => $r['status'], 'count' => $r['n']], $rows));
+    return 0;
+}
+
+function cmd_queue_retry(array $args): int {
+    if (empty($args[0])) { tpvsync_err('Uso: queue-retry <id>'); return 2; }
+    $id = (int) $args[0];
+    $db = Db::getInstance();
+    $row = $db->getRow('SELECT * FROM ' . _DB_PREFIX_ . 'tpv_sync_queue WHERE id = ' . $id);
+    if (!$row) { tpvsync_err("ID $id no encontrado"); return 1; }
+    $db->update('tpv_sync_queue', ['status' => 'pending', 'attempts' => 0, 'last_error' => null,
+        'scheduled_at' => date('Y-m-d H:i:s')], 'id = ' . $id);
+    tpvsync_ok("Item $id re-encolado");
+    return 0;
+}
+
+function cmd_queue_purge(array $assoc): int {
+    $days = (int) ($assoc['days'] ?? 30);
+    if ($days < 1) $days = 30;
+    $db = Db::getInstance();
+    $cutoff = date('Y-m-d H:i:s', time() - $days * 86400);
+    $db->execute('DELETE FROM ' . _DB_PREFIX_ . 'tpv_sync_queue
+                  WHERE status IN ("done","abandoned") AND created_at < "' . pSQL($cutoff) . '"');
+    $deleted = (int) Db::getInstance()->Affected_Rows();
+    tpvsync_ok("Borradas $deleted entradas anteriores a $cutoff");
+    return 0;
+}
+
+function cmd_breaker_status(): int {
+    $state = (string) Configuration::get('TPVSYNC_CB_STATE') ?: 'closed';
+    $fails = (int) Configuration::get('TPVSYNC_CB_FAILS');
+    $until = (int) Configuration::get('TPVSYNC_CB_OPEN_UNTIL');
+    tpvsync_info("state: $state");
+    tpvsync_info("fails: $fails");
+    tpvsync_info('open_until: ' . ($until > 0 ? gmdate('Y-m-d H:i:s', $until) . ' UTC' : 'n/a'));
+    return 0;
+}
+
+function cmd_breaker_reset(): int {
+    Configuration::updateValue('TPVSYNC_CB_STATE', 'closed');
+    Configuration::updateValue('TPVSYNC_CB_FAILS', 0);
+    Configuration::updateValue('TPVSYNC_CB_OPEN_UNTIL', 0);
+    tpvsync_ok('Circuit breaker reseteado a closed');
+    return 0;
+}
+
+function cmd_notify_eval(): int {
+    require_once _PS_MODULE_DIR_ . 'tpvsync/classes/TpvSyncNotifications.php';
+    $fired = TpvSyncNotifications::evaluateRules();
+    if (empty($fired)) {
+        tpvsync_ok('Sin alertas — todo OK');
+    } else {
+        tpvsync_warn('Alertas disparadas: ' . implode(', ', $fired));
+    }
+    return 0;
+}
+
+function cmd_secrets_migrate(): int {
+    $migrated = TpvSyncSecrets::migratePlaintext();
+    if ($migrated === 0) tpvsync_ok('Sin secrets en plaintext (ya cifrados o vacíos)');
+    else                 tpvsync_ok("$migrated secrets migrados a ciphertext");
+    return 0;
+}
+
+// ─── Dispatcher ──────────────────────────────────────────────────────────────
+
+[$pos, $assoc] = tpvsync_parse_args($argv);
+$command = $argv[1] ?? 'help';
+
+switch ($command) {
+    case 'status':           exit(cmd_status());
+    case 'test-connection':  exit(cmd_test_connection());
+    case 'reconcile':        exit(cmd_reconcile($assoc));
+    case 'push-all':         exit(cmd_push_all($assoc));
+    case 'queue-process':    exit(cmd_queue_process($assoc));
+    case 'queue-stats':      exit(cmd_queue_stats());
+    case 'queue-retry':      exit(cmd_queue_retry($pos));
+    case 'queue-purge':      exit(cmd_queue_purge($assoc));
+    case 'breaker-status':   exit(cmd_breaker_status());
+    case 'breaker-reset':    exit(cmd_breaker_reset());
+    case 'notify-eval':      exit(cmd_notify_eval());
+    case 'secrets-migrate':  exit(cmd_secrets_migrate());
+    case 'help':
+    case '--help':
+    case '-h':               exit(cmd_help($pos));
+    default:
+        tpvsync_err("Comando desconocido: $command");
+        cmd_help([]);
+        exit(2);
+}

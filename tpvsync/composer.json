@@ -1,0 +1,14 @@
+{
+    "name": "catinfog/prestashop-pos-sync",
+    "description": "Módulo PrestaShop: conecta una tienda PS con el TPV Catinfog (catálogo, stock, pedidos, devoluciones).",
+    "type": "prestashop-module",
+    "license": "AFL-3.0",
+    "keywords": ["prestashop", "tpv", "pos", "sync", "catinfog"],
+    "homepage": "https://catinfog.com",
+    "require": {
+        "php": ">=8.1"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

@@ -1,0 +1,1636 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   tpvsync — admin UI v4
+   Paleta y patrones replicados del plugin WooCommerce equivalente para
+   coherencia UX. Todos los selectores empiezan por `.tpvsync-page` para
+   no contaminar el resto del admin de PrestaShop (sidebar, breadcrumbs,
+   AdminModulesManageController, etc.).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.tpvsync-page {
+    --tps-brand: #2271b1;
+    --tps-brand-dark: #135e96;
+    --tps-brand-soft: #2271b115;
+    --tps-brand-ring: #2271b133;
+    --tps-border: #e5e7eb;
+    --tps-border-soft: #f1f2f4;
+    --tps-surface: #ffffff;
+    --tps-bg: #f6f7f7;
+    --tps-muted: #6b7280;
+    --tps-ink: #111827;
+    --tps-ink-soft: #374151;
+    --tps-success: #10b981;
+    --tps-success-bg: #ecfdf5;
+    --tps-success-ink: #047857;
+    --tps-warn-bg: #fef3c7;
+    --tps-warn: #92400e;
+    --tps-danger: #dc2626;
+    --tps-danger-bg: #fef2f2;
+
+    max-width: 880px;
+    margin: 24px auto 60px;
+    padding: 0 20px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    color: var(--tps-ink);
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+}
+.tpvsync-page h1, .tpvsync-page h2, .tpvsync-page h3 {
+    font-family: inherit;
+    letter-spacing: -0.01em;
+}
+
+/* ── Hero ───────────────────────────────────────────────────────────── */
+.tpvsync-page .tpvsync-hero {
+    text-align: center;
+    margin-bottom: 32px;
+    padding: 0;
+    background: transparent;
+}
+.tpvsync-page .tpvsync-hero-logos {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-bottom: 18px;
+}
+.tpvsync-page .tpvsync-hero-logos .tpvsync-logo {
+    height: 56px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-weight: 600;
+    font-size: 13px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.12);
+    padding: 0 18px;
+    letter-spacing: -0.01em;
+}
+.tpvsync-page .tpvsync-hero-logos .tpvsync-logo-ps  {
+    background: #df0067;
+    width: 56px;
+    padding: 0;
+}
+.tpvsync-page .tpvsync-hero-logos .tpvsync-logo-cat {
+    background: #111827;
+    font-size: 16px;
+}
+.tpvsync-page .tpvsync-hero-logos .tpvsync-arrows {
+    color: var(--tps-muted);
+    font-size: 22px;
+    animation: tpvsync-pulse 2.5s ease-in-out infinite;
+}
+@keyframes tpvsync-pulse { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
+.tpvsync-page .tpvsync-hero h1 {
+    margin: 0 0 6px;
+    font-size: 26px; font-weight: 600;
+    color: var(--tps-ink);
+}
+.tpvsync-page .tpvsync-hero p {
+    margin: 0 auto;
+    max-width: 480px;
+    font-size: 15px;
+    color: var(--tps-muted);
+}
+.tpvsync-page .tpvsync-hero-version {
+    display: inline-block;
+    margin-top: 14px;
+    padding: 3px 10px;
+    background: var(--tps-border-soft);
+    color: var(--tps-muted);
+    font-size: 11px; font-weight: 500;
+    border-radius: 999px;
+    letter-spacing: 0.01em;
+}
+
+/* ── Indicador de estado superior (pulso) ───────────────────────────── */
+.tpvsync-page .tpvsync-pulse-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px 8px 14px;
+    border-radius: 999px;
+    margin: 0 auto 22px;
+    font-size: 14px;
+    font-weight: 500;
+    background: transparent;
+}
+.tpvsync-page .tpvsync-pulse-status {
+    /* centramos el chip respecto a la página */
+    display: flex;
+    width: max-content;
+    margin-left: auto;
+    margin-right: auto;
+}
+.tpvsync-page .tpvsync-pulse-status-ok {
+    background: var(--tps-success-bg);
+    color: var(--tps-success-ink);
+    border: 1px solid #a7f3d0;
+}
+.tpvsync-page .tpvsync-pulse-status-off {
+    background: #f3f4f6;
+    color: var(--tps-muted);
+    border: 1px solid var(--tps-border);
+}
+.tpvsync-page .tpvsync-pulse-status-down {
+    background: var(--tps-danger-bg);
+    color: var(--tps-danger);
+    border: 1px solid #fecaca;
+}
+.tpvsync-page .tpvsync-pulse-status-pending {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fcd34d;
+}
+
+/* Dot con pulso animado en OK (verde) y DOWN (rojo). Off queda quieto. */
+.tpvsync-page .tpvsync-pulse-dot {
+    position: relative;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #9ca3af;
+    flex-shrink: 0;
+}
+.tpvsync-page .tpvsync-pulse-status-ok .tpvsync-pulse-dot {
+    background: #10b981;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, .55);
+    animation: tpvsync-pulse-ring-ok 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+.tpvsync-page .tpvsync-pulse-status-down .tpvsync-pulse-dot {
+    background: var(--tps-danger);
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, .55);
+    animation: tpvsync-pulse-ring-down 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+.tpvsync-page .tpvsync-pulse-status-pending .tpvsync-pulse-dot {
+    background: #f59e0b;
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, .55);
+    animation: tpvsync-pulse-ring-pending 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+@keyframes tpvsync-pulse-ring-pending {
+    0%   { box-shadow: 0 0 0 0   rgba(245, 158, 11, .55); }
+    70%  { box-shadow: 0 0 0 9px rgba(245, 158, 11, 0);   }
+    100% { box-shadow: 0 0 0 0   rgba(245, 158, 11, 0);   }
+}
+@keyframes tpvsync-pulse-ring-ok {
+    0%   { box-shadow: 0 0 0 0   rgba(16, 185, 129, .55); }
+    70%  { box-shadow: 0 0 0 9px rgba(16, 185, 129, 0);   }
+    100% { box-shadow: 0 0 0 0   rgba(16, 185, 129, 0);   }
+}
+@keyframes tpvsync-pulse-ring-down {
+    0%   { box-shadow: 0 0 0 0   rgba(220, 38, 38, .55); }
+    70%  { box-shadow: 0 0 0 9px rgba(220, 38, 38, 0);   }
+    100% { box-shadow: 0 0 0 0   rgba(220, 38, 38, 0);   }
+}
+
+/* ── Card / step ────────────────────────────────────────────────────── */
+.tpvsync-page .tpvsync-card {
+    background: var(--tps-surface);
+    border: 1px solid var(--tps-border);
+    border-radius: 12px;
+    padding: 26px 28px;
+    margin: 0 0 14px;
+    transition: border-color .15s, box-shadow .15s;
+}
+.tpvsync-page .tpvsync-card:hover { border-color: #d1d5db; }
+
+.tpvsync-page .tpvsync-card-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 0 0 16px;
+    padding: 0 0 14px;
+    border-bottom: 1px solid var(--tps-border-soft);
+}
+.tpvsync-page .tpvsync-step-number {
+    flex-shrink: 0;
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: var(--tps-border-soft);
+    color: var(--tps-muted);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+.tpvsync-page .tpvsync-card-header.is-done .tpvsync-step-number {
+    background: var(--tps-success);
+    color: #fff;
+}
+.tpvsync-page .tpvsync-card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--tps-ink);
+    letter-spacing: -0.005em;
+    margin: 0;
+    flex: 1;
+}
+.tpvsync-page .tpvsync-card-badge {
+    margin-left: auto;
+    font-size: 11.5px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.tpvsync-page .tpvsync-card-badge.ok   { background: var(--tps-success-bg); color: var(--tps-success-ink); }
+.tpvsync-page .tpvsync-card-badge.warn { background: var(--tps-warn-bg);    color: var(--tps-warn); }
+.tpvsync-page .tpvsync-card-badge.err  { background: var(--tps-danger-bg);  color: var(--tps-danger); }
+
+/* ── Field ──────────────────────────────────────────────────────────── */
+.tpvsync-page .tpvsync-field {
+    margin-bottom: 16px;
+}
+.tpvsync-page .tpvsync-field label {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--tps-ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 6px;
+    padding: 0;
+}
+.tpvsync-page .tpvsync-req { color: var(--tps-danger); }
+.tpvsync-page .tpvsync-field input[type="text"],
+.tpvsync-page .tpvsync-field input[type="url"],
+.tpvsync-page .tpvsync-field input[type="password"],
+.tpvsync-page .tpvsync-field input[type="email"] {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid var(--tps-border);
+    border-radius: 8px;
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--tps-ink);
+    background: var(--tps-surface);
+    box-shadow: none;
+    transition: border-color .15s, box-shadow .15s;
+    font-family: inherit;
+    height: auto;
+    box-sizing: border-box;
+}
+.tpvsync-page .tpvsync-field input:focus {
+    outline: none;
+    border-color: var(--tps-brand);
+    box-shadow: 0 0 0 3px var(--tps-brand-ring);
+}
+.tpvsync-page .tpvsync-hint {
+    display: block;
+    margin-top: 6px;
+    font-size: 12.5px;
+    color: var(--tps-muted);
+}
+
+.tpvsync-page .tpvsync-divider {
+    border: 0;
+    border-top: 1px solid var(--tps-border-soft);
+    margin: 22px 0;
+}
+
+/* ── Module card (con toggle) ───────────────────────────────────────── */
+.tpvsync-page .tpvsync-module {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 16px 18px;
+    background: #fafbfc;
+    border: 1px solid var(--tps-border-soft);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    transition: border-color .15s, background .15s, box-shadow .15s;
+}
+.tpvsync-page .tpvsync-module:has(input[type="checkbox"]:checked) {
+    background: #fff;
+    border-color: var(--tps-brand);
+    box-shadow: 0 0 0 3px var(--tps-brand-ring);
+}
+.tpvsync-page .tpvsync-module-text strong {
+    display: block;
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--tps-ink);
+    margin: 0 0 4px;
+}
+.tpvsync-page .tpvsync-module-text p {
+    margin: 0;
+    color: var(--tps-muted);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* ── Toggle (CSS-only, sin dependencias de PS) ──────────────────────── */
+.tpvsync-page .tpvsync-toggle {
+    position: relative;
+    display: inline-block;
+    width: 42px;
+    height: 24px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    cursor: pointer;
+}
+.tpvsync-page .tpvsync-toggle input[type="checkbox"] {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+.tpvsync-page .tpvsync-toggle .tpvsync-slider {
+    position: absolute;
+    inset: 0;
+    background: #cbd5e1;
+    border-radius: 999px;
+    transition: background .2s;
+}
+.tpvsync-page .tpvsync-toggle .tpvsync-slider::before {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    left: 3px;
+    top: 3px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,.12);
+    transition: transform .2s;
+}
+.tpvsync-page .tpvsync-toggle input[type="checkbox"]:checked ~ .tpvsync-slider {
+    background: var(--tps-brand);
+}
+.tpvsync-page .tpvsync-toggle input[type="checkbox"]:checked ~ .tpvsync-slider::before {
+    transform: translateX(18px);
+}
+
+/* ── Botones (pisamos !important al .btn de bootstrap PS) ───────────── */
+.tpvsync-page .tpvsync-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 18px;
+}
+.tpvsync-page .tpvsync-btn {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 18px !important;
+    border-radius: 8px !important;
+    font-size: 13.5px !important;
+    font-weight: 500 !important;
+    line-height: 1.4 !important;
+    border: 1px solid transparent !important;
+    cursor: pointer;
+    transition: all .15s !important;
+    text-decoration: none !important;
+    font-family: inherit !important;
+    height: auto !important;
+    text-shadow: none !important;
+    background-image: none !important;
+}
+.tpvsync-page .tpvsync-btn:hover { text-decoration: none !important; }
+.tpvsync-page .tpvsync-btn-primary {
+    background: var(--tps-brand) !important;
+    border-color: var(--tps-brand) !important;
+    color: #fff !important;
+}
+.tpvsync-page .tpvsync-btn-primary:hover,
+.tpvsync-page .tpvsync-btn-primary:focus {
+    background: var(--tps-brand-dark) !important;
+    border-color: var(--tps-brand-dark) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px var(--tps-brand-ring);
+    color: #fff !important;
+}
+.tpvsync-page .tpvsync-btn-secondary {
+    background: var(--tps-surface) !important;
+    border-color: var(--tps-border) !important;
+    color: var(--tps-ink-soft) !important;
+}
+.tpvsync-page .tpvsync-btn-secondary:hover {
+    background: #fafbfc !important;
+    border-color: #c5c8cd !important;
+    color: var(--tps-ink) !important;
+}
+.tpvsync-page .tpvsync-btn-danger {
+    background: var(--tps-surface) !important;
+    border-color: #fecaca !important;
+    color: var(--tps-danger) !important;
+    margin-left: auto !important;
+}
+.tpvsync-page .tpvsync-btn-danger:hover {
+    background: var(--tps-danger-bg) !important;
+    border-color: var(--tps-danger) !important;
+    color: var(--tps-danger) !important;
+}
+
+/* ── Status row / webhook URL ───────────────────────────────────────── */
+.tpvsync-page .tpvsync-status-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+.tpvsync-page .tpvsync-status-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--tps-ink-soft);
+}
+.tpvsync-page .tpvsync-webhook-url {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+.tpvsync-page .tpvsync-webhook-url code {
+    background: var(--tps-border-soft);
+    border: 1px solid var(--tps-border-soft);
+    color: var(--tps-ink-soft);
+    font-size: 12.5px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    word-break: break-all;
+}
+
+/* ── Badges ─────────────────────────────────────────────────────────── */
+.tpvsync-page .tpvsync-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 500;
+    line-height: 1.4;
+}
+.tpvsync-page .tpvsync-badge-ok   { background: var(--tps-success-bg); color: var(--tps-success-ink); }
+.tpvsync-page .tpvsync-badge-warn { background: var(--tps-warn-bg);    color: var(--tps-warn); }
+.tpvsync-page .tpvsync-badge-err  { background: var(--tps-danger-bg);  color: var(--tps-danger); }
+
+/* ── Table (cola) ───────────────────────────────────────────────────── */
+.tpvsync-page .tpvsync-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+    background: var(--tps-surface);
+    border: 1px solid var(--tps-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+.tpvsync-page .tpvsync-table thead th {
+    background: #fafbfc;
+    color: var(--tps-muted);
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--tps-border);
+    text-align: left;
+}
+.tpvsync-page .tpvsync-table tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--tps-border-soft);
+    color: var(--tps-ink-soft);
+    font-size: 13px;
+    vertical-align: middle;
+}
+.tpvsync-page .tpvsync-table tbody tr:last-child td { border-bottom: 0; }
+
+.tpvsync-page .tpvsync-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 500;
+    background: var(--tps-border-soft);
+    color: var(--tps-ink-soft);
+}
+.tpvsync-page .tpvsync-pill-pending { background: var(--tps-warn-bg);    color: var(--tps-warn); }
+.tpvsync-page .tpvsync-pill-failed  { background: var(--tps-danger-bg);  color: var(--tps-danger); }
+.tpvsync-page .tpvsync-pill-done    { background: var(--tps-success-bg); color: var(--tps-success-ink); }
+
+/* ── Collapsible ────────────────────────────────────────────────────── */
+.tpvsync-page .tpvsync-collapsible {
+    background: var(--tps-surface);
+    border: 1px solid var(--tps-border);
+    border-radius: 12px;
+    padding: 0;
+    margin-bottom: 14px;
+    overflow: hidden;
+}
+.tpvsync-page .tpvsync-collapsible summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 16px 24px;
+    font-weight: 500;
+    color: var(--tps-muted);
+    font-size: 14px;
+    user-select: none;
+}
+.tpvsync-page .tpvsync-collapsible summary::-webkit-details-marker { display: none; }
+.tpvsync-page .tpvsync-collapsible summary::before {
+    content: '▸';
+    margin-right: 10px;
+    display: inline-block;
+    transition: transform .15s;
+    font-size: 10px;
+    color: #9ca3af;
+}
+.tpvsync-page .tpvsync-collapsible[open] summary::before { transform: rotate(90deg); }
+.tpvsync-page .tpvsync-collapsible-meta {
+    color: #9ca3af;
+    font-weight: 400;
+    font-size: 13px;
+}
+.tpvsync-page .tpvsync-collapsible-body {
+    padding: 0 16px 16px;
+    border-top: 1px solid var(--tps-border-soft);
+}
+
+/* ── Spinner + busy ─────────────────────────────────────────────────── */
+.tpvsync-page .tpvsync-spinner,
+.tpvsync-spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid #cbd5e1;
+    border-top-color: var(--tps-brand);
+    border-radius: 50%;
+    animation: tpvsync-spin .7s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+}
+@keyframes tpvsync-spin { to { transform: rotate(360deg); } }
+.tpvsync-busy {
+    pointer-events: none;
+    opacity: .65;
+    cursor: progress !important;
+}
+.tpvsync-page .tpvsync-status {
+    margin-left: 10px;
+    color: var(--tps-muted);
+    font-style: normal;
+    font-size: 13px;
+}
+
+/* ── Reset PS defaults dentro de nuestra página ─────────────────────── */
+.tpvsync-page .panel,
+.tpvsync-page .form-wrapper,
+.tpvsync-page .panel-heading {
+    padding: 0;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    margin: 0;
+    color: inherit;
+}
+.tpvsync-page .panel-heading::before { display: none !important; }
+
+/* Ocultamos los confirm/error de bootstrap PS para que no rompan el diseño */
+.tpvsync-page > .alert {
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 14px;
+    font-size: 14px;
+}
+
+/* ── Wizard de sync inicial ─────────────────────────────────────────── */
+.tpvsync-page .tpvsync-wizard .tpvsync-counts {
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    gap: 16px;
+    margin: 0 0 22px;
+}
+.tpvsync-page .tpvsync-count-box {
+    flex: 0 1 220px;
+    background: #fafbfc;
+    border: 1px solid var(--tps-border-soft);
+    border-radius: 10px;
+    padding: 14px 18px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.tpvsync-page .tpvsync-count-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--tps-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.tpvsync-page .tpvsync-count-value {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--tps-ink);
+    font-variant-numeric: tabular-nums;
+}
+.tpvsync-page .tpvsync-count-unit {
+    font-size: 12px;
+    color: var(--tps-muted);
+    margin-top: -2px;
+}
+.tpvsync-page .tpvsync-count-arrow {
+    align-self: center;
+    font-size: 20px;
+    color: var(--tps-muted);
+}
+
+.tpvsync-page .tpvsync-wizard-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.tpvsync-page .tpvsync-wizard-option {
+    background: #fafbfc;
+    border: 1px solid var(--tps-border-soft);
+    border-radius: 10px;
+    padding: 16px 18px;
+    transition: border-color .15s, background .15s;
+}
+.tpvsync-page .tpvsync-wizard-option:hover {
+    background: #fff;
+    border-color: var(--tps-brand);
+}
+.tpvsync-page .tpvsync-wizard-option strong {
+    display: block;
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--tps-ink);
+    margin: 0 0 4px;
+}
+.tpvsync-page .tpvsync-wizard-option p {
+    margin: 0 0 12px;
+    color: var(--tps-muted);
+    font-size: 13px;
+    line-height: 1.5;
+}
+.tpvsync-page .tpvsync-wizard-option-skip strong {
+    color: var(--tps-muted);
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   Wizard v2 — 3 pasos visuales (decisión / sincronización / éxito)
+   ════════════════════════════════════════════════════════════════════════ */
+.tpvsync-page .tpvsync-wizard-v2 { padding: 28px 28px 24px; }
+.tpvsync-page .tpvsync-wizard-v2 .tpvsync-card-header { display: none; } /* sustituido por stepper */
+
+/* ── Stepper superior ────────────────────────────────────────────────── */
+.tpvsync-page .tpvsync-stepper {
+    list-style: none;
+    margin: 0 0 28px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+.tpvsync-page .tpvsync-stepper-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px 6px 6px;
+    border-radius: 999px;
+    background: #f4f5f7;
+    color: var(--tps-muted);
+    font-size: 13px;
+    font-weight: 500;
+    transition: all .25s;
+}
+.tpvsync-page .tpvsync-stepper-num {
+    width: 26px; height: 26px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #e5e7eb; color: #6b7280;
+    font-size: 13px; font-weight: 700;
+    transition: all .25s;
+}
+.tpvsync-page .tpvsync-stepper-item.is-active {
+    background: var(--tps-brand-soft);
+    color: var(--tps-brand);
+}
+.tpvsync-page .tpvsync-stepper-item.is-active .tpvsync-stepper-num {
+    background: var(--tps-brand);
+    color: #fff;
+    box-shadow: 0 0 0 4px var(--tps-brand-ring);
+}
+.tpvsync-page .tpvsync-stepper-item.is-done {
+    background: var(--tps-success-bg);
+    color: var(--tps-success-ink);
+}
+.tpvsync-page .tpvsync-stepper-item.is-done .tpvsync-stepper-num {
+    background: var(--tps-success);
+    color: #fff;
+}
+.tpvsync-page .tpvsync-stepper-item.is-done .tpvsync-stepper-num::before {
+    content: "✓";
+    font-size: 14px;
+}
+.tpvsync-page .tpvsync-stepper-item.is-done .tpvsync-stepper-num-text { display: none; }
+.tpvsync-page .tpvsync-stepper-line {
+    flex: 0 1 36px;
+    height: 2px;
+    background: #e5e7eb;
+    border-radius: 2px;
+}
+
+/* ── Paneles de cada paso (mostramos solo el activo) ────────────────── */
+.tpvsync-page .tpvsync-wstep { display: none; animation: tpvsync-fadein .3s ease-out; }
+.tpvsync-page .tpvsync-wstep.is-active { display: block; }
+@keyframes tpvsync-fadein {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.tpvsync-page .tpvsync-wstep-title {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--tps-ink);
+    margin: 0 0 8px;
+    text-align: center;
+    line-height: 1.3;
+}
+.tpvsync-page .tpvsync-wstep-lead {
+    color: var(--tps-muted);
+    font-size: 14px;
+    line-height: 1.55;
+    margin: 0 0 24px;
+    text-align: center;
+    max-width: 640px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   Pantalla "Estado de la sincronización" (botón unificado del footer)
+   ════════════════════════════════════════════════════════════════════════ */
+.tpvsync-page .tpvsync-syncstatus-card {
+    padding: 0;
+    overflow: hidden;
+}
+.tpvsync-page .tpvsync-syncstatus-header {
+    padding: 28px 28px 22px;
+    text-align: center;
+}
+.tpvsync-page .tpvsync-syncstatus-header.is-ok  {
+    background: linear-gradient(180deg, #ecfdf5 0%, #d1fae5 100%);
+    color: #065f46;
+}
+.tpvsync-page .tpvsync-syncstatus-header.is-warn {
+    background: linear-gradient(180deg, #fffbeb 0%, #fef3c7 100%);
+    color: #78350f;
+}
+.tpvsync-page .tpvsync-syncstatus-icon {
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.6);
+    font-size: 28px; font-weight: 700;
+    margin-bottom: 12px;
+}
+.tpvsync-page .tpvsync-syncstatus-header.is-ok .tpvsync-syncstatus-icon { color: #047857; }
+.tpvsync-page .tpvsync-syncstatus-header.is-warn .tpvsync-syncstatus-icon { color: #b45309; }
+.tpvsync-page .tpvsync-syncstatus-header h2 {
+    margin: 0 0 6px;
+    font-size: 22px;
+    font-weight: 600;
+}
+.tpvsync-page .tpvsync-syncstatus-header p { margin: 0; font-size: 14px; }
+
+.tpvsync-page .tpvsync-syncstatus-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    padding: 22px 28px 8px;
+}
+.tpvsync-page .tpvsync-syncstatus-stat {
+    background: #fafbfc;
+    border: 1px solid var(--tps-border-soft);
+    border-radius: 12px;
+    padding: 16px 14px 14px;
+    display: flex; flex-direction: column;
+    gap: 4px;
+    text-align: center;
+}
+.tpvsync-page .tpvsync-syncstatus-stat .num {
+    font-size: 28px; font-weight: 700;
+    color: var(--tps-ink);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+.tpvsync-page .tpvsync-syncstatus-stat .lbl {
+    font-size: 13px; font-weight: 600;
+    color: var(--tps-ink-soft);
+    margin-top: 2px;
+}
+.tpvsync-page .tpvsync-syncstatus-stat .hlp {
+    font-size: 11.5px;
+    color: var(--tps-muted);
+    line-height: 1.35;
+}
+.tpvsync-page .tpvsync-syncstatus-stat.is-warn { background: #fef3c7; border-color: #fde68a; }
+.tpvsync-page .tpvsync-syncstatus-stat.is-warn .num { color: #92400e; }
+.tpvsync-page .tpvsync-syncstatus-stat.is-summary {
+    background: var(--tps-brand-soft);
+    border-color: var(--tps-brand-ring);
+}
+.tpvsync-page .tpvsync-syncstatus-stat.is-summary .num { color: var(--tps-brand); }
+
+.tpvsync-page .tpvsync-syncstatus-info {
+    margin: 4px 28px 12px;
+    padding: 10px 14px;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    color: var(--tps-ink-soft);
+    font-size: 12.5px;
+    line-height: 1.5;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+.tpvsync-page .tpvsync-syncstatus-info-icon {
+    flex: 0 0 auto;
+    color: var(--tps-muted);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.tpvsync-page .tpvsync-syncstatus-context {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    padding: 6px 28px 18px;
+    font-size: 12.5px;
+    color: var(--tps-muted);
+}
+
+.tpvsync-page .tpvsync-syncstatus-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 28px 24px;
+    border-top: 1px solid var(--tps-border-soft);
+    background: #fafbfc;
+}
+
+@media (max-width: 720px) {
+    .tpvsync-page .tpvsync-syncstatus-stats { grid-template-columns: 1fr 1fr; }
+}
+
+/* Nota informativa entre los contadores y las cards (paso 1) */
+.tpvsync-page .tpvsync-match-note {
+    margin: 12px auto 22px;
+    max-width: 640px;
+    padding: 10px 14px;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 10px;
+    color: #075985;
+    font-size: 12.5px;
+    line-height: 1.5;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+.tpvsync-page .tpvsync-match-note-icon {
+    flex: 0 0 auto;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: #0284c7;
+    color: #fff;
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    line-height: 1;
+}
+
+/* ── PASO 1: tarjetas grandes de decisión ──────────────────────────── */
+.tpvsync-page .tpvsync-bigchoice {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin: 8px 0 0;
+}
+.tpvsync-page .tpvsync-bigchoice-card {
+    all: unset;
+    cursor: pointer;
+    background: #fff;
+    border: 2px solid var(--tps-border);
+    border-radius: 14px;
+    padding: 22px 22px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    text-align: left;
+    transition: border-color .18s, transform .18s, box-shadow .18s;
+    position: relative;
+}
+.tpvsync-page .tpvsync-bigchoice-card:hover {
+    border-color: var(--tps-brand);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px -8px rgba(34, 113, 177, 0.25);
+}
+.tpvsync-page .tpvsync-bigchoice-card:focus-visible {
+    outline: 3px solid var(--tps-brand-ring);
+    outline-offset: 2px;
+}
+.tpvsync-page .tpvsync-bigchoice-icon {
+    width: 72px; height: 72px;
+    border-radius: 16px;
+    background: #ffffff;
+    border: 1px solid var(--tps-border-soft);
+    color: var(--tps-brand);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 14px;
+    transition: transform .18s, box-shadow .18s;
+    overflow: hidden;
+    padding: 8px;
+}
+.tpvsync-page .tpvsync-bigchoice-icon svg,
+.tpvsync-page .tpvsync-bigchoice-icon img {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+/* Variante horizontal: el logo Catinfog es panorámico (4.2:1), el cuadrado
+   estricto lo deja minúsculo. Esta variante alarga el contenedor y centra
+   el logo dentro, dándole protagonismo. */
+.tpvsync-page .tpvsync-bigchoice-icon-wide {
+    width: 180px; height: 60px;
+    border-radius: 12px;
+    padding: 10px 14px;
+}
+.tpvsync-page .tpvsync-bigchoice-card:hover .tpvsync-bigchoice-icon {
+    transform: scale(1.05);
+    box-shadow: 0 4px 14px -4px rgba(0,0,0,0.15);
+}
+.tpvsync-page .tpvsync-bigchoice-body strong {
+    display: block;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--tps-ink);
+    margin: 0 0 2px;
+}
+.tpvsync-page .tpvsync-bigchoice-lead {
+    display: block;
+    color: var(--tps-brand);
+    font-size: 12.5px;
+    font-weight: 600;
+    margin: 0 0 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.tpvsync-page .tpvsync-bigchoice-body p {
+    color: var(--tps-ink-soft);
+    font-size: 13.5px;
+    line-height: 1.55;
+    margin: 0 0 14px;
+}
+.tpvsync-page .tpvsync-bigchoice-steps {
+    list-style: none;
+    counter-reset: tpvsync-step;
+    margin: 0 0 14px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.tpvsync-page .tpvsync-bigchoice-steps li {
+    counter-increment: tpvsync-step;
+    position: relative;
+    padding-left: 30px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--tps-ink-soft);
+}
+.tpvsync-page .tpvsync-bigchoice-steps li::before {
+    content: counter(tpvsync-step);
+    position: absolute;
+    left: 0; top: 0;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--tps-brand-soft);
+    color: var(--tps-brand);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    transition: background .18s, color .18s;
+}
+.tpvsync-page .tpvsync-bigchoice-card:hover .tpvsync-bigchoice-steps li::before {
+    background: var(--tps-brand);
+    color: #fff;
+}
+.tpvsync-page .tpvsync-bigchoice-cta {
+    margin-top: auto;
+    display: inline-block;
+    color: var(--tps-brand);
+    font-weight: 600;
+    font-size: 13px;
+}
+.tpvsync-page .tpvsync-bigchoice-card:hover .tpvsync-bigchoice-cta {
+    color: var(--tps-brand-dark);
+}
+
+/* ── PASO 2: animación de sincronización ───────────────────────────── */
+.tpvsync-page .tpvsync-syncscene {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin: 18px auto 26px;
+    max-width: 560px;
+    padding: 26px 12px;
+    background: linear-gradient(180deg, #fafbfc 0%, #f4f6f8 100%);
+    border-radius: 14px;
+    border: 1px solid var(--tps-border-soft);
+}
+.tpvsync-page .tpvsync-syncbox {
+    flex: 0 0 130px;
+    text-align: center;
+    background: #fff;
+    border: 1px solid var(--tps-border);
+    border-radius: 12px;
+    padding: 14px 10px 12px;
+    box-shadow: 0 2px 6px -3px rgba(0,0,0,0.08);
+    transition: transform .25s;
+}
+.tpvsync-page .tpvsync-syncbox-from {
+    animation: tpvsync-syncbox-pulse-from 2s ease-in-out infinite;
+}
+.tpvsync-page .tpvsync-syncbox-to {
+    animation: tpvsync-syncbox-pulse-to 2s ease-in-out infinite;
+}
+@keyframes tpvsync-syncbox-pulse-from {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-3px); }
+}
+@keyframes tpvsync-syncbox-pulse-to {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(3px); }
+}
+.tpvsync-page .tpvsync-syncbox-icon {
+    font-size: 32px;
+    line-height: 1;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+}
+.tpvsync-page .tpvsync-syncbox-icon svg,
+.tpvsync-page .tpvsync-syncbox-icon img {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+}
+/* Logo Catinfog horizontal: alargar el contenedor para mostrarlo bien. */
+.tpvsync-page .tpvsync-syncbox-icon-wide {
+    min-height: 36px;
+    width: 100%;
+}
+.tpvsync-page .tpvsync-syncbox-icon-wide img {
+    max-width: 110px;
+    max-height: 32px;
+    object-fit: contain;
+}
+.tpvsync-page .tpvsync-syncbox-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--tps-ink);
+}
+.tpvsync-page .tpvsync-syncbox-counter {
+    font-size: 11px;
+    color: var(--tps-muted);
+    margin-top: 2px;
+    font-variant-numeric: tabular-nums;
+}
+
+/* "Tubería" entre las dos cajas — paquetes que viajan */
+.tpvsync-page .tpvsync-syncpipe {
+    flex: 1 1 auto;
+    height: 60px;
+    position: relative;
+    overflow: hidden;
+}
+.tpvsync-page .tpvsync-syncpipe::before {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; top: 50%;
+    height: 2px;
+    background: repeating-linear-gradient(
+        90deg,
+        var(--tps-brand) 0 6px,
+        transparent 6px 12px
+    );
+    transform: translateY(-50%);
+    opacity: .35;
+}
+.tpvsync-page .tpvsync-syncparcel {
+    position: absolute;
+    top: 50%;
+    width: 16px; height: 16px;
+    background: var(--tps-brand);
+    border-radius: 4px;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 2px 6px -2px rgba(34, 113, 177, 0.5);
+    animation: tpvsync-parcel-fly 1.6s linear infinite;
+}
+.tpvsync-page .tpvsync-syncparcel::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    background: rgba(255,255,255,0.4);
+    border-radius: 2px;
+}
+.tpvsync-page .tpvsync-syncparcel-1 { animation-delay: 0s;     left: 0; }
+.tpvsync-page .tpvsync-syncparcel-2 { animation-delay: -0.55s; left: 0; }
+.tpvsync-page .tpvsync-syncparcel-3 { animation-delay: -1.1s;  left: 0; }
+@keyframes tpvsync-parcel-fly {
+    0%   { left: 0%;   opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+    10%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    90%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { left: 100%; opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+}
+/* Cuando la dirección es PS→TPV invertimos la animación cambiando el sentido */
+.tpvsync-page .tpvsync-syncscene.is-reverse .tpvsync-syncparcel {
+    animation-name: tpvsync-parcel-fly-reverse;
+}
+@keyframes tpvsync-parcel-fly-reverse {
+    0%   { left: 100%; opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+    10%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    90%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { left: 0%;   opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+}
+
+/* Barra de progreso del paso 2 */
+.tpvsync-page .tpvsync-syncprogress {
+    max-width: 560px;
+    margin: 0 auto;
+}
+.tpvsync-page .tpvsync-syncprogress-bar-wrap {
+    height: 10px;
+    background: #e5e7eb;
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+}
+.tpvsync-page .tpvsync-syncprogress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--tps-brand) 0%, var(--tps-brand-dark) 100%);
+    border-radius: 999px;
+    transition: width .35s ease-out;
+    position: relative;
+}
+.tpvsync-page .tpvsync-syncprogress-bar::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255,255,255,0.3) 50%,
+        transparent 100%
+    );
+    animation: tpvsync-shimmer 1.6s linear infinite;
+}
+@keyframes tpvsync-shimmer {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+.tpvsync-page .tpvsync-syncprogress-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--tps-muted);
+    font-variant-numeric: tabular-nums;
+}
+.tpvsync-page .tpvsync-syncprogress-eta {
+    text-align: center;
+    margin-top: 8px;
+    color: var(--tps-muted);
+    font-size: 12.5px;
+    min-height: 18px;
+}
+
+/* Estado de fallo en paso 2 */
+.tpvsync-page .tpvsync-syncfail {
+    margin-top: 18px;
+    padding: 14px 16px;
+    background: var(--tps-danger-bg);
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    color: var(--tps-danger);
+}
+.tpvsync-page .tpvsync-syncfail strong {
+    display: block;
+    color: var(--tps-danger);
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+.tpvsync-page .tpvsync-syncfail p {
+    margin: 0 0 12px;
+    color: #7f1d1d;
+    font-size: 13px;
+    line-height: 1.5;
+}
+.tpvsync-page .tpvsync-syncfail-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+/* ── PASO 3: éxito ─────────────────────────────────────────────────── */
+.tpvsync-page .tpvsync-success-circle {
+    display: flex;
+    justify-content: center;
+    margin: 8px 0 14px;
+}
+.tpvsync-page .tpvsync-success-ring {
+    transform-origin: center;
+    transform: rotate(-90deg);
+    stroke-dasharray: 188;
+    stroke-dashoffset: 188;
+    animation: tpvsync-ring-draw .55s ease-out forwards;
+}
+.tpvsync-page .tpvsync-success-check {
+    stroke-dasharray: 50;
+    stroke-dashoffset: 50;
+    animation: tpvsync-check-draw .35s ease-out .5s forwards;
+}
+@keyframes tpvsync-ring-draw {
+    to { stroke-dashoffset: 0; }
+}
+@keyframes tpvsync-check-draw {
+    to { stroke-dashoffset: 0; }
+}
+.tpvsync-page .tpvsync-wstep-title-success {
+    color: var(--tps-success-ink);
+}
+/* Resumen numérico de la sincronización (paso 3) */
+.tpvsync-page .tpvsync-success-stats {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    margin: 6px auto 18px;
+    max-width: 640px;
+}
+.tpvsync-page .tpvsync-success-stat {
+    flex: 1 1 160px;
+    min-width: 140px;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    border-radius: 12px;
+    padding: 14px 16px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.tpvsync-page .tpvsync-success-stat-num {
+    font-size: 26px;
+    font-weight: 700;
+    color: #047857;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+.tpvsync-page .tpvsync-success-stat-lbl {
+    font-size: 12px;
+    color: #065f46;
+    line-height: 1.35;
+}
+.tpvsync-page .tpvsync-success-stat.is-warn {
+    background: var(--tps-warn-bg);
+    border-color: #fde68a;
+}
+.tpvsync-page .tpvsync-success-stat.is-warn .tpvsync-success-stat-num { color: var(--tps-warn); }
+.tpvsync-page .tpvsync-success-stat.is-warn .tpvsync-success-stat-lbl { color: var(--tps-warn); }
+
+.tpvsync-page .tpvsync-success-bullets {
+    list-style: none;
+    margin: 6px auto 22px;
+    padding: 0;
+    max-width: 580px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.tpvsync-page .tpvsync-success-bullets li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: #fafbfc;
+    border: 1px solid var(--tps-border-soft);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--tps-ink-soft);
+}
+.tpvsync-page .tpvsync-success-bullets li::before {
+    content: "✓";
+    color: var(--tps-success);
+    font-weight: 700;
+    flex: 0 0 auto;
+    font-size: 14px;
+    line-height: 1.45;
+}
+.tpvsync-page .tpvsync-btn.tpvsync-btn-large {
+    display: block;
+    margin: 0 auto;
+    padding: 12px 28px;
+    font-size: 14.5px;
+}
+
+/* ── Responsive del wizard v2 ──────────────────────────────────────── */
+@media (max-width: 720px) {
+    .tpvsync-page .tpvsync-wizard-v2 { padding: 18px 16px 18px; }
+    .tpvsync-page .tpvsync-bigchoice { grid-template-columns: 1fr; gap: 12px; }
+    .tpvsync-page .tpvsync-bigchoice-card { padding: 18px 18px 16px; }
+    .tpvsync-page .tpvsync-stepper-label { display: none; }
+    .tpvsync-page .tpvsync-stepper-line { flex: 0 1 24px; }
+    .tpvsync-page .tpvsync-syncscene { flex-direction: column; gap: 14px; }
+    .tpvsync-page .tpvsync-syncpipe { width: 60px; height: 80px; }
+    .tpvsync-page .tpvsync-syncpipe::before {
+        left: 50%; right: auto; top: 0; bottom: 0; width: 2px; height: auto;
+        background: repeating-linear-gradient(180deg, var(--tps-brand) 0 6px, transparent 6px 12px);
+        transform: translateX(-50%);
+    }
+    .tpvsync-page .tpvsync-syncparcel {
+        animation-name: tpvsync-parcel-fly-vertical;
+    }
+    @keyframes tpvsync-parcel-fly-vertical {
+        0%   { top: 0%;   left: 50%; opacity: 0; }
+        10%  { opacity: 1; }
+        90%  { opacity: 1; }
+        100% { top: 100%; left: 50%; opacity: 0; }
+    }
+    .tpvsync-page .tpvsync-syncscene.is-reverse .tpvsync-syncparcel {
+        animation-name: tpvsync-parcel-fly-vertical-reverse;
+    }
+    @keyframes tpvsync-parcel-fly-vertical-reverse {
+        0%   { top: 100%; left: 50%; opacity: 0; }
+        10%  { opacity: 1; }
+        90%  { opacity: 1; }
+        100% { top: 0%;   left: 50%; opacity: 0; }
+    }
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────── */
+@media (max-width: 720px) {
+    .tpvsync-page { padding: 0 12px; }
+    .tpvsync-page .tpvsync-card { padding: 20px 18px; }
+    .tpvsync-page .tpvsync-card-header { flex-wrap: wrap; }
+    .tpvsync-page .tpvsync-card-badge { margin-left: 0; }
+}
+
+/* ── Modal de progreso (wizard inicial PUSH/PULL) ───────────────────────
+   Se monta vía JS al pulsar "Enviar al TPV" o "Traer del TPV". Bloquea
+   interacción con el resto de la página mientras corre el bucle AJAX —
+   cualquier click fuera del modal sería contraproducente (recargas o
+   navegaciones cancelan el bucle a media import). */
+/* hidden HTML5 debe forzar display:none. El CSS de PrestaShop a veces
+   incluye un display:flex global que lo override y provoca que el modal
+   aparezca al cargar la página antes de que el JS lo gestione. !important
+   garantiza que el modal NO se muestra nunca sin intervención explícita. */
+.tpvsync-progress-overlay[hidden] { display: none !important; }
+.tpvsync-progress-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, .55);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+body.tpvsync-modal-open { overflow: hidden; }
+.tpvsync-progress-modal {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .25);
+    padding: 26px 28px;
+    width: 100%;
+    max-width: 460px;
+    text-align: center;
+    font-family: inherit;
+}
+.tpvsync-progress-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 6px;
+    color: var(--tps-ink);
+}
+.tpvsync-progress-warn {
+    font-size: 12px;
+    color: var(--tps-muted);
+    margin: 0 0 18px;
+}
+.tpvsync-progress-bar-wrap {
+    height: 12px;
+    background: #f1f5f9;
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+.tpvsync-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #2563eb);
+    border-radius: 999px;
+    transition: width .3s ease-out;
+}
+.tpvsync-progress-meta {
+    display: flex;
+    justify-content: space-between;
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+    color: var(--tps-ink);
+    font-weight: 500;
+}
+.tpvsync-progress-eta {
+    margin: 6px 0 0;
+    font-size: 12px;
+    color: var(--tps-muted);
+    min-height: 1em;
+}
+.tpvsync-progress-final {
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--tps-border-soft);
+}
+.tpvsync-progress-final-ok {
+    color: #065f46;
+    font-weight: 500;
+    margin: 0 0 14px;
+}
+.tpvsync-progress-final-fail {
+    color: var(--tps-danger);
+    font-weight: 500;
+    margin: 0 0 14px;
+    word-break: break-word;
+}
+
+/* Botón X de cierre forzoso del modal de progreso. Siempre visible —
+   precaución contra estados bloqueantes (red caída, cache obsoleta, etc).
+   El usuario nunca debe quedar atrapado en un modal sin escape. */
+.tpvsync-progress-modal { position: relative; }
+.tpvsync-progress-x {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    background: transparent;
+    border: 0;
+    font-size: 24px;
+    line-height: 1;
+    color: var(--tps-muted);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+.tpvsync-progress-x:hover {
+    background: var(--tps-border-soft);
+    color: var(--tps-ink);
+}
+
+/* Barra "indeterminada" — animación de gradiente moviéndose mientras
+   esperamos la primera respuesta del primer lote. Sustituye al "0%" fijo
+   que daba la sensación de que la app se había colgado. */
+.tpvsync-progress-bar.tpvsync-progress-bar-indeterminate {
+    background: linear-gradient(
+        90deg,
+        #93c5fd 0%, #3b82f6 30%, #2563eb 50%, #3b82f6 70%, #93c5fd 100%
+    );
+    background-size: 200% 100%;
+    animation: tpvsync-bar-slide 1.4s linear infinite;
+}
+@keyframes tpvsync-bar-slide {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Wizard de divergencia post-sync (3 pasos)
+   ═══════════════════════════════════════════════════════════════════════ */
+.tpvsync-page .tpvsync-div-page {
+    max-width: 720px;
+    margin: 30px auto;
+}
+.tpvsync-page .tpvsync-div-steps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 28px;
+    font-size: 13px;
+    color: var(--tps-muted);
+}
+.tpvsync-page .tpvsync-div-step {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: #f3f4f6;
+    color: var(--tps-muted);
+    font-weight: 500;
+}
+.tpvsync-page .tpvsync-div-step.active {
+    background: var(--tps-brand-soft);
+    color: var(--tps-brand);
+    box-shadow: 0 0 0 3px var(--tps-brand-ring);
+}
+.tpvsync-page .tpvsync-div-step.done {
+    background: var(--tps-success-bg);
+    color: var(--tps-success-ink);
+}
+.tpvsync-page .tpvsync-div-step.fail {
+    background: var(--tps-danger-bg);
+    color: var(--tps-danger);
+}
+.tpvsync-page .tpvsync-div-step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.5);
+    font-size: 11px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.tpvsync-page .tpvsync-div-step.done .tpvsync-div-step-num,
+.tpvsync-page .tpvsync-div-step.active .tpvsync-div-step-num {
+    background: rgba(255,255,255,.7);
+}
+
+/* Tarjetas de opción (3 botones grandes apilados) */
+.tpvsync-page .tpvsync-div-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 12px 0;
+}
+.tpvsync-page .tpvsync-div-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px 18px;
+    border: 1px solid var(--tps-border);
+    border-radius: 10px;
+    background: white;
+    cursor: pointer;
+    text-align: left;
+    transition: all .12s;
+    font-family: inherit;
+}
+.tpvsync-page .tpvsync-div-option:hover {
+    border-color: var(--tps-brand);
+    background: var(--tps-brand-soft);
+    transform: translateY(-1px);
+}
+.tpvsync-page .tpvsync-div-option-primary {
+    border-color: #93c5fd;
+    background: #eff6ff;
+}
+.tpvsync-page .tpvsync-div-option-primary:hover {
+    background: #dbeafe;
+    border-color: var(--tps-brand);
+}
+.tpvsync-page .tpvsync-div-option-warn {
+    border-color: #fcd34d;
+    background: #fffbeb;
+}
+.tpvsync-page .tpvsync-div-option-warn:hover {
+    background: #fef3c7;
+}
+.tpvsync-page .tpvsync-div-option-quiet {
+    background: #fafafa;
+}
+.tpvsync-page .tpvsync-div-option-icon {
+    font-size: 24px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.tpvsync-page .tpvsync-div-option-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+.tpvsync-page .tpvsync-div-option-body strong {
+    color: var(--tps-ink);
+    font-size: 14.5px;
+    font-weight: 600;
+}
+.tpvsync-page .tpvsync-div-option-hint {
+    font-size: 12.5px;
+    color: var(--tps-muted);
+    line-height: 1.45;
+}
