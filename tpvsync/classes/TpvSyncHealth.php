@@ -126,6 +126,53 @@ class TpvSyncHealth
         return ['kind' => 'healthy', 'level' => 'ok'];
     }
 
+    /**
+     * Deja un mensaje de error en algo que se pueda leer de un vistazo.
+     *
+     * Los errores de la API se guardan con el cuerpo problem+json entero
+     * pegado detrás del contexto, y con las barras escapadas por json_encode.
+     * En el panel eso ocupaba tres líneas de las que lo único accionable
+     * ("Recurso no encontrado", 404) quedaba enterrado en medio.
+     *
+     * El panel existe para diagnosticar sin abrir ticket: un volcado JSON es
+     * exactamente lo contrario. Se conserva el contexto (quién falló), el
+     * title y el status; se tira el resto.
+     *
+     * Si no hay JSON reconocible, el mensaje se devuelve tal cual: no se
+     * inventa nada ni se pierde información.
+     */
+    public static function humanizeError($message, $max = 200)
+    {
+        $message = trim((string) $message);
+        if ($message === '') {
+            return '';
+        }
+
+        $pos = strpos($message, '{');
+        if ($pos !== false) {
+            $prefijo = rtrim(Tools::substr($message, 0, $pos), " :\t");
+            $json = json_decode(Tools::substr($message, $pos), true);
+
+            if (is_array($json) && isset($json['title'])) {
+                $resumen = trim((string) $json['title']);
+                if (isset($json['status'])) {
+                    $resumen .= ' (' . (int) $json['status'] . ')';
+                }
+                $message = $prefijo !== '' ? $prefijo . ': ' . $resumen : $resumen;
+            } elseif ($prefijo !== '') {
+                // JSON que no reconocemos: mejor el contexto solo que el
+                // volcado entero. Nunca devolver vacío.
+                $message = $prefijo;
+            }
+        }
+
+        if (Tools::strlen($message) > $max) {
+            $message = Tools::substr($message, 0, $max - 1) . '…';
+        }
+
+        return $message;
+    }
+
     // ─── Lectura de las señales (esto ya toca la BD) ─────────────────────────
 
     /** Fragmento SQL con la lista de estados de fallo, ya escapada. */
@@ -147,10 +194,14 @@ class TpvSyncHealth
      */
     public static function lastOkAge()
     {
+        // SIN 'LIMIT 1': getValue() delega en getRow(), que lo concatena por
+        // su cuenta (classes/db/Db.php:650). Escribirlo aquí produce
+        // "LIMIT 1 LIMIT 1" -> error 1064 -> el health check entero devuelve
+        // 500 y el panel dice "No se pudo obtener el diagnóstico".
         $ts = Db::getInstance()->getValue(
             'SELECT created_at FROM ' . _DB_PREFIX_ . 'tpv_sync_log
              WHERE status NOT IN (' . self::failureSqlList() . ')
-             ORDER BY id DESC LIMIT 1'
+             ORDER BY id DESC'
         );
         if (!$ts) {
             return null;
@@ -162,10 +213,11 @@ class TpvSyncHealth
     /** Último error registrado: mensaje y cuándo. null si no hay ninguno. */
     public static function lastError()
     {
+        // SIN 'LIMIT 1' — ver la nota de lastOkAge(): getRow() ya lo añade.
         $row = Db::getInstance()->getRow(
             'SELECT message, event_type, created_at FROM ' . _DB_PREFIX_ . 'tpv_sync_log
              WHERE status IN (' . self::failureSqlList() . ')
-             ORDER BY id DESC LIMIT 1'
+             ORDER BY id DESC'
         );
 
         return $row ?: null;

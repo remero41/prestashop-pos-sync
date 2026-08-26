@@ -2277,7 +2277,7 @@ HTML;
             $checks[] = [
                 'name'   => 'Último error',
                 'level'  => 'warn',
-                'detail' => Tools::substr((string) $snap['last_error']['message'], 0, 180)
+                'detail' => TpvSyncHealth::humanizeError((string) $snap['last_error']['message'], 180)
                           . ' · ' . (string) ($snap['last_error']['created_at'] ?? ''),
             ];
         }

@@ -17,6 +17,28 @@ if (!defined('_PS_VERSION_')) {
     define('_PS_VERSION_', '8.1.0');
 }
 
+// ─── Stubs del core de PrestaShop ────────────────────────────────────────────
+// Solo lo que exigen las piezas puras bajo prueba. Tools::substr y strlen son
+// MULTIBYTE en el core (delegan en mb_*): stubearlos con substr/strlen a secas
+// partiria los acentos al recortar, y este runner probaria algo distinto de lo
+// que corre en produccion.
+if (!class_exists('Tools')) {
+    class Tools
+    {
+        public static function substr($str, $start, $length = null)
+        {
+            return $length === null
+                ? mb_substr((string) $str, $start, null, 'UTF-8')
+                : mb_substr((string) $str, $start, $length, 'UTF-8');
+        }
+
+        public static function strlen($str)
+        {
+            return mb_strlen((string) $str, 'UTF-8');
+        }
+    }
+}
+
 final class PrestaTestRunner
 {
     private $passed = 0;
