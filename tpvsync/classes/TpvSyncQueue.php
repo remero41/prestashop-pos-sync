@@ -135,11 +135,12 @@ class TpvSyncQueue
                 if ($idOrder === 0 || $idSlip === 0) {
                     return true;
                 }
-                (new TpvSyncOrder($this->api))->onPsRefund($idOrder, $idSlip);
-                // Si el log del último intento muestra 0 errors → éxito; usamos la
-                // heurística simple de "si el breaker sigue closed y no hubo error
-                // en los últimos 5s para este resource, ok".
-                return true;
+                // BUG-D (auditoria 2026-08-26): aqui habia un `return true` a ciegas
+                // bajo un comentario que describia una heuristica de breaker/log
+                // NUNCA IMPLEMENTADA — no se consultaba el log, ni el breaker, ni
+                // el retorno. Una devolucion que la API rechazaba se marcaba como
+                // sincronizada y se borraba de la cola. Es dinero.
+                return (new TpvSyncOrder($this->api))->onPsRefund($idOrder, $idSlip);
 
             case 'stock.push':
                 $tpvId = (int) ($payload['tpv_product_id'] ?? 0);
@@ -148,7 +149,10 @@ class TpvSyncQueue
                     return true;
                 }
                 $current = $this->api->get("/products/$tpvId/stock");
-                if (isset($current['error'])) {
+                // BUG-A, misma clase distinta forma: miraba SOLO isset($current['error']).
+                // Un 404/502 en problem+json no la trae, asi que seguia adelante y
+                // calculaba el delta contra un $tpvQty inexistente.
+                if (!TpvSyncApiClient::fueBien($current)) {
                     return false;
                 }
                 $tpvQty = null;
@@ -169,7 +173,12 @@ class TpvSyncQueue
                     'reason' => (string) ($payload['reason'] ?? 'ajuste_manual'),
                     'comment' => (string) ($payload['comment'] ?? ''),
                 ]);
-                return empty($res['error']) && empty($res['errors']);
+
+                // BUG-A: esto era `empty($res['error']) && empty($res['errors'])`.
+                // Un 404/502/429 no trae esas claves, asi que el ajuste de stock se
+                // marcaba aplicado y se BORRABA de la cola: PS y el TPV divergian
+                // sin senal y sin nadie que reintentara.
+                return TpvSyncApiClient::fueBien($res);
 
             case 'product.push':
                 $psId = (int) ($payload['id_product'] ?? 0);

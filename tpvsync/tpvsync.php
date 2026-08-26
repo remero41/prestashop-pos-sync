@@ -603,7 +603,12 @@ HTML;
             $api = $this->api();
             if ($api->isConfigured()) {
                 $r = $api->post('/auth/verify', []);
-                $ok = is_array($r) && empty($r['error']) && empty($r['errors']);
+                // BUG-A — EL PEOR DE LOS SIETE. Este es el semaforo que el
+                // comerciante mira para saber si sincroniza. Decidia salud con
+                // "el cuerpo no trae la clave errors", y como problem+json nunca
+                // la trae, daba VERDE ante credenciales revocadas, un 500 del
+                // servidor o un 502 del proxy: mentia justo cuando importaba.
+                $ok = TpvSyncApiClient::fueBien($r);
             }
         } catch (\Throwable $e) {
             $ok = false;
@@ -2655,7 +2660,7 @@ HTML;
                 foreach ($batchIds as $tpvId) {
                     try {
                         $r = $this->api()->patch('/products/' . $tpvId, ['status' => 0]);
-                        if (empty($r['error']) && empty($r['errors'])) {
+                        if (TpvSyncApiClient::fueBien($r)) {   // BUG-A: rama de EXITO
                             $stats['deactivated']++;
                         } else {
                             $stats['errors']++;
@@ -3556,7 +3561,16 @@ HTML;
         if (!empty($GLOBALS['tpvsync_skip_refund_push'])) {
             return;
         }
-        $this->orders()->onPsRefund((int) $slip->id_order, (int) $slip->id);
+        // BUG-D: onPsRefund ya no reencola por su cuenta (lo hacia y ademas la cola
+        // reintentaba, duplicando la entrada). Reencolar es de quien llama, y este
+        // hook es el unico camino que no pasa por la cola: si falla aqui y nadie
+        // encola, la devolucion se pierde en silencio.
+        if (!$this->orders()->onPsRefund((int) $slip->id_order, (int) $slip->id)) {
+            $this->queue()->enqueue('refund.send', [
+                'id_order' => (int) $slip->id_order,
+                'id_order_slip' => (int) $slip->id,
+            ], 'refund push failed');
+        }
     }
 
     // ─── Hooks de Customer ──────────────────────────────────────────────────
