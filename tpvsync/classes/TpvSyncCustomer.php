@@ -103,7 +103,10 @@ class TpvSyncCustomer
                     "PATCH /customers/$tpvId 404 — mapping huérfano, recreando (PS=$idCustomer)"
                 );
                 $tpvId = 0;
-            } elseif (!empty($r['error']) || !empty($r['errors']) || !empty($r['type'])) {
+            } elseif (!TpvSyncApiClient::fueBien($r)) {
+                // BUG-A: rama de FALLO. La rama isNotFound de arriba se conserva
+                // INTACTA: alli el 404 no es un fallo, es la senal de que el
+                // mapping quedo huerfano y hay que recrear el cliente.
                 TpvSyncLog::error('customer', $tpvId, $this->formatApiError($r));
                 return;
             } else {
@@ -139,7 +142,7 @@ class TpvSyncCustomer
         if ($tpvId === 0) return;
 
         $r = $this->api->delete("/customers/$tpvId");
-        if (!empty($r['error']) || !empty($r['errors'])) {
+        if (!TpvSyncApiClient::fueBien($r)) {   // BUG-A: rama de FALLO
             TpvSyncLog::error('customer', $tpvId, "DELETE /customers/$tpvId: " . $this->formatApiError($r));
             return;
         }

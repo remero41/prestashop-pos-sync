@@ -411,19 +411,36 @@ class TpvSyncOrder
 
     // ─── Refund PS → TPV ─────────────────────────────────────────────────────
 
-    public function onPsRefund(int $idOrder, int $idOrderSlip): void
+    /**
+     * Empuja a la API la devolucion de un order slip de PrestaShop.
+     *
+     * @return bool true si la API confirmo la devolucion (o si no habia nada que
+     *              propagar). Antes era void y la cola devolvia true a ciegas:
+     *              una devolucion fallida se marcaba como sincronizada y se
+     *              borraba de la cola (BUG-D, auditoria 2026-08-26). Es dinero.
+     *
+     * Los caminos y su signo estan tabulados en docs/ONPSREFUND_CAMINOS.md. OJO
+     * al cambiarlos: un `return;` sin valor devuelve null, que es falsy, y
+     * convertiria un exito en un reintento perpetuo.
+     *
+     * NO reencola: de eso se encarga quien llama (el hook de PS o la cola). Si
+     * reencolara aqui Y ademas devolviera false, la cola reintentaria la entrada
+     * y la misma devolucion quedaria encolada dos veces.
+     */
+    public function onPsRefund(int $idOrder, int $idOrderSlip): bool
     {
         if (!empty($GLOBALS['tpvsync_skip_refund_push'])) {
-            return;
+            return true;   // omision deliberada (la devolucion viene DEL TPV), no es un fallo
         }
         $tpvOrderId = $this->findTpvByPs($idOrder);
         if ($tpvOrderId === 0) {
             TpvSyncLog::skip('order', $idOrder, "Refund slip $idOrderSlip: pedido sin mapeo TPV");
-            return;
+
+            return true;   // terminal: sin mapeo no hay nada que propagar, reintentar no lo arregla
         }
         $slip = new OrderSlip($idOrderSlip);
         if (!Validate::isLoadedObject($slip)) {
-            return;
+            return true;   // terminal: un slip que no carga no se arregla reintentando
         }
 
         // Líneas del slip con producto + cantidad
@@ -435,7 +452,7 @@ class TpvSyncOrder
              WHERE osd.id_order_slip = ' . (int) $idOrderSlip
         );
         if (!$rows) {
-            return;
+            return true;   // terminal: slip sin lineas, nada que propagar
         }
 
         $ps = new TpvSyncProduct($this->api);
@@ -466,13 +483,16 @@ class TpvSyncOrder
             }
         }
         if ($errors > 0) {
-            (new TpvSyncQueue($this->api))->enqueue('refund.send', [
-                'id_order' => $idOrder,
-                'id_order_slip' => $idOrderSlip,
-            ], "$errors line(s) failed");
-        } else {
-            TpvSyncLog::ok('order', $idOrder, "Refund slip $idOrderSlip propagado a TPV order $tpvOrderId");
+            // El enqueue vivia aqui. Se ha movido al hook de PrestaShop
+            // (tpvsync.php::hookActionOrderSlipAdd): si reencolaramos aqui Y
+            // ademas devolvieramos false, la cola marcaria la entrada como
+            // fallida y la reintentaria — con la misma devolucion encolada dos
+            // veces. Reencolar es de quien gestiona la cola, no de esta funcion.
+            return false;
         }
+        TpvSyncLog::ok('order', $idOrder, "Refund slip $idOrderSlip propagado a TPV order $tpvOrderId");
+
+        return true;
     }
 
     // ═══════════════════════════════════════════════════════════════════════

@@ -865,7 +865,9 @@ class TpvSyncProduct
         }
 
         $resp = $this->api->post('/products/bulk', ['items' => $bulkPayloads]);
-        if (!empty($resp['error']) || !empty($resp['errors'])) {
+        // BUG-A: rama de FALLO — antes un 4xx/5xx sin la clave 'errors' no entraba
+        // aqui y el bulk se daba por bueno sin caer al fallback singular.
+        if (!TpvSyncApiClient::fueBien($resp)) {
             // El bulk falló entero. Caemos al singular para no perder los
             // productos — más lento pero garantiza progreso.
             // Log con el field+message exacto para diagnosticar qué item rompió.
@@ -955,7 +957,9 @@ class TpvSyncProduct
                     "PATCH /products/$tpvId devolvió 404 — mapping huérfano, recreando en TPV (PS=$idProduct)"
                 );
                 $tpvId = 0; // fall through a creación
-            } elseif (!empty($r['error']) || !empty($r['errors']) || !empty($r['type'])) {
+            } elseif (!TpvSyncApiClient::fueBien($r)) {
+                // BUG-A: rama de FALLO. La rama de 404 huerfano de arriba se
+                // conserva INTACTA: alli el 404 es una senal, no un error.
                 TpvSyncLog::error('product', $tpvId,
                     'PATCH TPV: ' . ($r['error'] ?? substr((string) json_encode($r), 0, 200))
                 );
