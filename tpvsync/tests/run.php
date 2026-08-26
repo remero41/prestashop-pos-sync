@@ -54,6 +54,24 @@ final class PrestaTestRunner
         }
     }
 
+    /**
+     * Igualdad estricta. El mensaje por defecto muestra esperado vs obtenido:
+     * sin eso, un fallo de umbral solo dice "fallo" y hay que ir a leer el
+     * test para saber que salio.
+     */
+    public function assertEquals($expected, $actual, $msg = '')
+    {
+        $ok = $expected === $actual;
+        if ($msg === '') {
+            $msg = sprintf('esperado %s, obtenido %s',
+                var_export($expected, true), var_export($actual, true));
+        } elseif (!$ok) {
+            $msg .= sprintf(' (esperado %s, obtenido %s)',
+                var_export($expected, true), var_export($actual, true));
+        }
+        $this->assert($ok, $msg);
+    }
+
     public function summary()
     {
         $total = $this->passed + $this->failed;
@@ -80,9 +98,11 @@ $t = new PrestaTestRunner();
 // existir ANTES de cargar TpvSyncOrder, que los referencia.
 require_once __DIR__ . '/test_api_client_parse.php';
 require_once __DIR__ . '/test_refund_paths.php';
+require_once __DIR__ . '/test_sync_health_panel.php';
 require_once dirname(__DIR__) . '/classes/TpvSyncOrder.php';
 
 run_api_client_parse_tests($t);
 run_refund_paths_tests($t);
+run_sync_health_panel_tests($t);
 
 exit($t->summary());

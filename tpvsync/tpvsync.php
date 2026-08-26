@@ -25,6 +25,7 @@ require_once _PS_MODULE_DIR_ . 'tpvsync/classes/TpvSyncNotifications.php';
 require_once _PS_MODULE_DIR_ . 'tpvsync/classes/TpvSyncApiClient.php';
 require_once _PS_MODULE_DIR_ . 'tpvsync/classes/TpvSyncCircuitBreaker.php';
 require_once _PS_MODULE_DIR_ . 'tpvsync/classes/TpvSyncLog.php';
+require_once _PS_MODULE_DIR_ . 'tpvsync/classes/TpvSyncHealth.php';
 require_once _PS_MODULE_DIR_ . 'tpvsync/classes/TpvSyncProduct.php';
 require_once _PS_MODULE_DIR_ . 'tpvsync/classes/TpvSyncOrder.php';
 require_once _PS_MODULE_DIR_ . 'tpvsync/classes/TpvSyncQueue.php';
@@ -2166,6 +2167,33 @@ HTML;
     {
         $checks = [];
 
+        // 0) Última sincronización correcta — la señal que el estándar pone
+        // PRIMERA. Sin ella, el contador de cola no se puede interpretar:
+        // 300 pendientes con marca fresca significa "la cola desborda al
+        // ejecutor" (subir frecuencia), y con marca obsoleta significa "esto
+        // está parado" (mirar credenciales/cron). Acciones opuestas.
+        $snap = TpvSyncHealth::snapshot();
+        $ageTxt = $snap['age'] === null
+            ? 'nunca'
+            : ($snap['age'] < 60
+                ? 'hace ' . (int) $snap['age'] . ' s'
+                : ($snap['age'] < 3600
+                    ? 'hace ' . intdiv((int) $snap['age'], 60) . ' min'
+                    : ($snap['age'] < 86400
+                        ? 'hace ' . intdiv((int) $snap['age'], 3600) . ' h'
+                        : 'hace ' . intdiv((int) $snap['age'], 86400) . ' días')));
+        $diagTxt = [
+            'healthy' => 'Todo al día',
+            'backlog' => 'El TPV responde, pero la cola crece más rápido de lo que se vacía',
+            'stalled' => 'Hace demasiado que no se sincroniza — revisa conexión y cron',
+            'dropped' => 'Hay cambios dados por perdidos: requieren reintento manual',
+        ];
+        $checks[] = [
+            'name'   => 'Última sincronización',
+            'level'  => $snap['freshness'],
+            'detail' => $ageTxt . ' · ' . ($diagTxt[$snap['diagnosis']['kind']] ?? ''),
+        ];
+
         // 1) Configuración mínima
         $apiUrl  = (string) Configuration::get('TPVSYNC_API_URL');
         $cid     = (string) Configuration::get('TPVSYNC_CLIENT_ID');
@@ -2231,19 +2259,28 @@ HTML;
             'detail' => "Estado: $breakerState · fallos: $breakerFails",
         ];
 
-        // 5) Queue
-        $pending = (int) Db::getInstance()->getValue(
-            'SELECT COUNT(*) FROM ' . _DB_PREFIX_ . 'tpv_sync_queue WHERE status = "pending"'
-        );
-        $abandoned = (int) Db::getInstance()->getValue(
-            'SELECT COUNT(*) FROM ' . _DB_PREFIX_ . 'tpv_sync_queue WHERE status = "abandoned"'
-        );
-        $queueLevel = $abandoned > 0 ? 'err' : ($pending > 50 ? 'warn' : 'ok');
+        // 5) Queue. Los contadores y el umbral salen del snapshot de arriba
+        // para no volver a consultarlos y, sobre todo, para que el umbral sea
+        // UNO SOLO y compartido con el conector de WooCommerce (antes estaba
+        // escrito a mano aquí con `> 50`, que además dejaba fuera el 50 justo).
+        $pending   = (int) $snap['pending'];
+        $abandoned = (int) $snap['abandoned'];
         $checks[] = [
             'name'   => 'Queue',
-            'level'  => $queueLevel,
+            'level'  => $snap['queue_level'],
             'detail' => "$pending pending · $abandoned abandoned",
         ];
+
+        // 5b) Último error, si lo hay. El estándar lo pide junto a las dos
+        // señales: saber que algo falla sin saber QUÉ obliga a abrir ticket.
+        if (!empty($snap['last_error']['message'])) {
+            $checks[] = [
+                'name'   => 'Último error',
+                'level'  => 'warn',
+                'detail' => Tools::substr((string) $snap['last_error']['message'], 0, 180)
+                          . ' · ' . (string) ($snap['last_error']['created_at'] ?? ''),
+            ];
+        }
 
         // 6) Secrets
         $decryptFlag = (string) Configuration::get('TPVSYNC_SECRET_DECRYPT_FAILED');
