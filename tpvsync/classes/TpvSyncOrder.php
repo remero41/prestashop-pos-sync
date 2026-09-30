@@ -474,7 +474,10 @@ class TpvSyncOrder
                 'comment' => 'Refund PrestaShop slip #' . $idOrderSlip,
                 'return_reason_id' => 0,
                 'return_action_id' => 0,
-                'return_status_id' => 1,
+                // Sin return_status_id: la API da de alta la devolución ya
+                // ejecutada (3) y rechaza cualquier otro con 422
+                // invalid_return_status (api_tpv, 22-08-2026). Con el 1 que se
+                // mandaba, ningún reembolso llegaba al TPV.
             ], $idem);
             if (empty($res['data']['return_id']) && empty($res['return_id'])) {
                 $errors++;
