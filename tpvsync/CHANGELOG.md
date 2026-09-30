@@ -2,6 +2,19 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versionado: [SemVer](https://semver.org/).
 
+## [1.0.3] - 2026-09-30
+
+Numeración: la línea publicada es 1.0.x (`VERSION` en `tpvsync.php` y los
+releases de GitHub). La entrada 1.1.0 de abril de más abajo nunca se publicó
+con ese número.
+
+### Fixed
+- **Los reembolsos no llegaban al TPV.** Desde el 22-08-2026 la API del TPV da
+  de alta la devolución ya ejecutada y rechaza cualquier `return_status_id`
+  distinto de 3 (422 `invalid_return_status`). El módulo mandaba 1: ningún
+  reembolso de PrestaShop llegaba al TPV y la cola los reintentaba hasta
+  abandonarlos. Ya no se manda el campo.
+
 ## [1.1.0] - 2026-04-24
 
 ### Changed

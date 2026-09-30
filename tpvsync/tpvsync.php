@@ -34,7 +34,7 @@ require_once _PS_MODULE_DIR_ . 'tpvsync/classes/TpvSyncCustomer.php';
 
 class TpvSync extends Module
 {
-    public const VERSION = '1.0.2';
+    public const VERSION = '1.0.3';
 
     /**
      * Hooks de PrestaShop a los que se suscribe el módulo.
