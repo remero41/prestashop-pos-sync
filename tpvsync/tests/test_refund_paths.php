@@ -83,10 +83,12 @@ class TpvTestApi extends TpvSyncApiClient
 {
     public $respuesta = [];
     public $llamadas  = 0;
+    public $cuerpos   = [];
     // Firmas identicas a las del padre (TpvSyncApiClient), o PHP rechaza la clase.
     public function post(string $path, array $body = [], ?string $idempotencyKey = null): array
     {
         $this->llamadas++;
+        $this->cuerpos[] = $body;
 
         return $this->respuesta;
     }
@@ -209,6 +211,24 @@ function run_refund_paths_tests(PrestaTestRunner $t)
         $api = tpvTestApi(TpvSyncApiClient::decide(201, ['data' => ['return_id' => 99]]));
         $r = (new TpvSyncOrder($api))->onPsRefund(1, 1);
         $t->assert($r === true, 'La ruta feliz debe seguir devolviendo true. Devolvio: ' . var_export($r, true));
+    });
+
+    // ── La API rechaza return_status_id != 3 (api_tpv bb2b474, 22-08-2026) ──
+    // El alta de devolución nace ejecutada (3) y cualquier otro valor es 422
+    // invalid_return_status. El módulo mandaba 1: NINGÚN reembolso de
+    // PrestaShop llegaba al TPV desde entonces (mismo fallo que en Woo).
+    $t->test('el reembolso no manda un return_status_id que la API rechaza', function ($t) {
+        TpvTestDb::$value = 555;
+        TpvTestDb::$rows  = [[
+            'id_order_detail' => 1, 'product_quantity' => 1,
+            'amount_tax_incl' => 10.0, 'product_name' => 'Camiseta', 'product_id' => 7,
+        ]];
+        $api = tpvTestApi(TpvSyncApiClient::decide(201, ['data' => ['return_id' => 99]]));
+        (new TpvSyncOrder($api))->onPsRefund(1, 1);
+        $body = $api->cuerpos[0] ?? [];
+        $t->assert($body !== [], 'no llegó a mandar la línea');
+        $t->assert(!isset($body['return_status_id']) || (int) $body['return_status_id'] === 3,
+            'return_status_id=' . var_export($body['return_status_id'] ?? null, true) . ' ⇒ 422 en la API real');
     });
 
     $t->suite('BUG-D — ningun camino devuelve null');
