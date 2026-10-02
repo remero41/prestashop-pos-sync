@@ -45,6 +45,47 @@ class TpvSyncProduct
         return (int) ($row['id_product'] ?? 0);
     }
 
+    // ─── Venta a peso ────────────────────────────────────────────────────────
+    //
+    // El TPV vende algunos productos a peso (API: `sold_by_weight`): precio por kg y
+    // stock con decimales. PS guarda unidades enteras, así que esos productos no se
+    // publican (se desactivan si ya lo estaban) ni intercambian stock con el TPV. La
+    // marca vive en tpv_sync_product_map.a_peso; la columna se garantiza al usarla
+    // (como el TPV con su propia columna), sin depender de que el módulo se haya
+    // actualizado por el back office.
+
+    private static ?bool $hayColumnaAPeso = null;
+
+    public static function asegurarColumnaAPeso(): void
+    {
+        if (self::$hayColumnaAPeso) {
+            return;
+        }
+        $t = _DB_PREFIX_ . 'tpv_sync_product_map';
+        if (!Db::getInstance()->executeS("SHOW COLUMNS FROM $t LIKE 'a_peso'")) {
+            Db::getInstance()->execute("ALTER TABLE $t ADD COLUMN a_peso TINYINT(1) NOT NULL DEFAULT 0");
+        }
+        self::$hayColumnaAPeso = true;
+    }
+
+    private function marcarAPeso(int $idProduct, bool $aPeso): void
+    {
+        self::asegurarColumnaAPeso();
+        Db::getInstance()->execute(
+            'UPDATE ' . _DB_PREFIX_ . 'tpv_sync_product_map SET a_peso = ' . ($aPeso ? 1 : 0)
+            . ' WHERE id_product = ' . (int) $idProduct
+        );
+    }
+
+    /** ¿El TPV vende a peso este producto? Por id del TPV. */
+    public function esAPeso(int $tpvId): bool
+    {
+        self::asegurarColumnaAPeso();
+        return (string) Db::getInstance()->getValue(
+            'SELECT a_peso FROM ' . _DB_PREFIX_ . 'tpv_sync_product_map WHERE tpv_product_id = ' . (int) $tpvId
+        ) === '1';
+    }
+
     public function findTpvByPs(int $idProduct): int
     {
         $row = Db::getInstance()->getRow(
@@ -343,6 +384,20 @@ class TpvSyncProduct
             }
         }
 
+        // Venta a peso: no se publica. Si ya estaba en PS se DESACTIVA (no se borra ni se
+        // desenlaza); si no estaba, no se crea. Cuando el TPV lo desmarque, este mismo
+        // upsert le devuelve el estado del TPV (vuelve a activarse).
+        if (!empty($p['sold_by_weight'])) {
+            if ($psId > 0) {
+                $this->marcarAPeso($psId, true);
+                $this->deleteProductFromTpv($tpvId, 'se vende a peso en el TPV');
+            }
+            return 'a_peso';
+        }
+        if ($psId > 0) {
+            $this->marcarAPeso($psId, false);
+        }
+
         $GLOBALS['tpvsync_skip_product_push'] = true;
         // Durante el upsert TPV→PS, los StockAvailable::setQuantity() internos
         // disparan actionUpdateQuantity (nuestro hook PS→TPV). Sin este guard
@@ -556,8 +611,8 @@ class TpvSyncProduct
     public function updateStock(int $tpvId, float $quantity): void
     {
         $psId = $this->findPsByTpv($tpvId);
-        if ($psId === 0) {
-            return;
+        if ($psId === 0 || $this->esAPeso($tpvId)) {
+            return; // a peso: stock en kg con decimales, PS no lo lleva
         }
         $GLOBALS['tpvsync_skip_stock_push'] = true;
         try {
@@ -599,7 +654,7 @@ class TpvSyncProduct
         }
     }
 
-    public function deleteProductFromTpv(int $tpvId): void
+    public function deleteProductFromTpv(int $tpvId, string $motivo = 'borrado en TPV'): void
     {
         $psId = $this->findPsByTpv($tpvId);
         if ($psId === 0) {
@@ -615,7 +670,7 @@ class TpvSyncProduct
         } finally {
             $GLOBALS['tpvsync_skip_product_push'] = false;
         }
-        TpvSyncLog::ok('product', $tpvId, 'Producto PS ' . $psId . ' desactivado (borrado en TPV)');
+        TpvSyncLog::ok('product', $tpvId, 'Producto PS ' . $psId . ' desactivado (' . $motivo . ')');
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1067,6 +1122,10 @@ class TpvSyncProduct
         if ($tpvId === 0) {
             return;
         }
+        // A peso: el entero de PS pisaría el stock decimal del TPV (4,25 kg → 4).
+        if ($this->esAPeso($tpvId)) {
+            return;
+        }
 
         if ($idProductAttribute > 0) {
             $povId = $this->findPovByCombination($idProductAttribute);
@@ -1151,6 +1210,10 @@ class TpvSyncProduct
                     continue;
                 }
                 $stats['checked']++;
+                if (!empty($data['sold_by_weight'])) {
+                    $stats['skipped']++;
+                    continue;
+                }
                 if (!empty($data['options'])) {
                     foreach ($data['options'] as $opt) {
                         foreach ($opt['values'] ?? [] as $val) {
