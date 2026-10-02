@@ -127,4 +127,12 @@ run_api_client_parse_tests($t);
 run_refund_paths_tests($t);
 run_sync_health_panel_tests($t);
 
+// La venta a peso prueba la clase REAL TpvSyncProduct, que aquí está sustituida por un
+// doble (test_refund_paths.php): corre en su propio proceso y cuenta como un test.
+$t->suite('Venta a peso (proceso aparte)');
+$t->test('tests/test_venta_a_peso.php en verde', function ($t) {
+    passthru(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(__DIR__ . '/test_venta_a_peso.php'), $rc);
+    $t->assertEquals(0, $rc, 'test_venta_a_peso.php');
+});
+
 exit($t->summary());

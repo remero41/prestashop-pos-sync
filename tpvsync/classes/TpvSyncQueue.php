@@ -148,6 +148,10 @@ class TpvSyncQueue
                 if ($tpvId === 0) {
                     return true;
                 }
+                // A peso: la API rechaza (409) el stock entero de PS; reintentar sería un bucle.
+                if ((new TpvSyncProduct($this->api))->esAPeso($tpvId)) {
+                    return true;
+                }
                 $current = $this->api->get("/products/$tpvId/stock");
                 // BUG-A, misma clase distinta forma: miraba SOLO isset($current['error']).
                 // Un 404/502 en problem+json no la trae, asi que seguia adelante y
