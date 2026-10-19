@@ -17,6 +17,9 @@ CREATE TABLE IF NOT EXISTS `PREFIX_tpv_sync_product_map` (
     `updated_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     -- 1 = el TPV lo vende a peso: no se publica ni intercambia stock (TpvSyncProduct::esAPeso).
     `a_peso`          TINYINT(1)   NOT NULL DEFAULT 0,
+    -- Último ★ (model) del TPV escrito en este producto: reconoce el ean13/upc rancio al cambiarlo
+    -- (TpvSyncProduct::gtinTrasModelo). En instalaciones viejas se añade al usarla.
+    `tpv_model`       VARCHAR(100) NOT NULL DEFAULT '',
     PRIMARY KEY (`id_product`),
     UNIQUE KEY `uk_tpv_pid` (`tpv_product_id`)
 ) ENGINE=ENGINE_TYPE DEFAULT CHARSET=CHARSET_TYPE;

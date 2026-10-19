@@ -86,6 +86,74 @@ class TpvSyncProduct
         ) === '1';
     }
 
+    // ─── El GTIN rancio (varios códigos de barras del TPV, 18-10) ─────────────────────
+    //
+    // Al cambiar el ★ (model) en el TPV de un EAN a una referencia, el ean13 viejo se quedaba en PS
+    // y volvía al TPV en el siguiente guardado (buildPushPayload prefiere el ean13). El módulo
+    // recuerda el último ★ que escribió (tpv_sync_product_map.tpv_model, columna garantizada al
+    // usarla, como a_peso) y borra el ean13/upc que era ese ★. Uno puesto a mano se respeta.
+
+    private static ?bool $hayColumnaTpvModel = null;
+
+    public static function asegurarColumnaTpvModel(): void
+    {
+        if (self::$hayColumnaTpvModel) {
+            return;
+        }
+        $t = _DB_PREFIX_ . 'tpv_sync_product_map';
+        if (!Db::getInstance()->executeS("SHOW COLUMNS FROM $t LIKE 'tpv_model'")) {
+            Db::getInstance()->execute("ALTER TABLE $t ADD COLUMN tpv_model VARCHAR(100) NOT NULL DEFAULT ''");
+        }
+        self::$hayColumnaTpvModel = true;
+    }
+
+    /** El último ★ del TPV que escribió el módulo en este producto de PS ('' si no se sabe). */
+    private function modeloTpvAnterior(int $idProduct): string
+    {
+        if ($idProduct <= 0) {
+            return '';
+        }
+        self::asegurarColumnaTpvModel();
+        return (string) Db::getInstance()->getValue(
+            'SELECT tpv_model FROM ' . _DB_PREFIX_ . 'tpv_sync_product_map WHERE id_product = ' . (int) $idProduct
+        );
+    }
+
+    private function guardarModeloTpv(int $tpvId, string $model): void
+    {
+        self::asegurarColumnaTpvModel();
+        Db::getInstance()->execute(
+            'UPDATE ' . _DB_PREFIX_ . 'tpv_sync_product_map SET tpv_model = \'' . pSQL(Tools::substr($model, 0, 100)) . '\''
+            . ' WHERE tpv_product_id = ' . (int) $tpvId
+        );
+    }
+
+    /**
+     * ean13 / upc de PS tras escribir el ★ del TPV: valor a guardar, '' para BORRARLO o null para no
+     * tocarlo. ★ de 8-14 cifras → es el GTIN (12 = upc, el resto ean13, como siempre). Además, el
+     * ean13/upc que era el ★ ANTERIOR que escribió el módulo se borra si ya no lo es.
+     *
+     * @return array{ean13: ?string, upc: ?string}
+     */
+    public static function gtinTrasModelo(string $modelTpv, string $ean13, string $upc, string $modeloAnterior): array
+    {
+        $m = trim($modelTpv);
+        $ant = trim($modeloAnterior);
+        $out = ['ean13' => null, 'upc' => null];
+        if ($m !== '' && preg_match('/^\d{8,14}$/', $m)) {
+            $out[strlen($m) === 12 ? 'upc' : 'ean13'] = $m;
+        }
+        if ($m === '' || $ant === '') {
+            return $out;
+        }
+        foreach (['ean13' => trim($ean13), 'upc' => trim($upc)] as $campo => $actual) {
+            if ($out[$campo] === null && $actual !== '' && $actual === $ant && $actual !== $m) {
+                $out[$campo] = '';
+            }
+        }
+        return $out;
+    }
+
     public function findTpvByPs(int $idProduct): int
     {
         $row = Db::getInstance()->getRow(
@@ -515,14 +583,16 @@ class TpvSyncProduct
                 0,
                 64
             );
-            if ($modelTpv !== '' && preg_match('/^\d{8,14}$/', $modelTpv)) {
-                if (strlen($modelTpv) === 13) {
-                    $product->ean13 = $modelTpv;
-                } elseif (strlen($modelTpv) === 12) {
-                    $product->upc = $modelTpv;
-                } else {
-                    $product->ean13 = $modelTpv; // isbn/8-dig fallback
+            // GTIN: el ★ si lo es; y el que escribimos con el ★ anterior se borra si ya no lo es
+            // (gtinTrasModelo: si no, volvería al TPV como eco).
+            $modeloAnterior = $isNew ? '' : $this->modeloTpvAnterior((int) $product->id);
+            $gtin = self::gtinTrasModelo($modelTpv, (string) $product->ean13, (string) $product->upc, $modeloAnterior);
+            foreach ($gtin as $campoGtin => $valorGtin) {
+                if ($valorGtin !== null) {
+                    $product->$campoGtin = $valorGtin;
                 }
+            }
+            if ($modelTpv !== '' && preg_match('/^\d{8,14}$/', $modelTpv)) {
                 $product->reference = $sanitizeRef($skuTpv !== '' ? $skuTpv : $modelTpv);
             } else {
                 $product->reference = $sanitizeRef($modelTpv !== '' ? $modelTpv : $skuTpv);
@@ -560,6 +630,10 @@ class TpvSyncProduct
             }
 
             $this->setMap((int) $product->id, $tpvId);
+            // El ★ que acabamos de escribir: así se reconoce el GTIN rancio en el próximo cambio.
+            if ($modelTpv !== '') {
+                $this->guardarModeloTpv($tpvId, $modelTpv);
+            }
 
             // Stock (productos sin variantes). En multi-shop propagamos a todas
             // las tiendas; en mono-shop es una sola llamada.

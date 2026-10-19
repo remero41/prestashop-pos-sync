@@ -134,5 +134,10 @@ $t->test('tests/test_venta_a_peso.php en verde', function ($t) {
     passthru(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(__DIR__ . '/test_venta_a_peso.php'), $rc);
     $t->assertEquals(0, $rc, 'test_venta_a_peso.php');
 });
+$t->suite('GTIN rancio al cambiar el ★ del TPV (proceso aparte)');
+$t->test('tests/test_gtin_rancio.php en verde', function ($t) {
+    passthru(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(__DIR__ . '/test_gtin_rancio.php'), $rc);
+    $t->assertEquals(0, $rc, 'test_gtin_rancio.php');
+});
 
 exit($t->summary());
